@@ -1155,6 +1155,7 @@ function JobDetailModal({ job, clients, machines, staffUsers, onClose, onEdit, o
                   <th style={{ textAlign: "left", padding: "6px 10px", border: "1px solid #dee2e6", fontSize: 12, fontWeight: 700, color: "#868e96" }}>#</th>
                   <th style={{ textAlign: "left", padding: "6px 10px", border: "1px solid #dee2e6", fontSize: 12, fontWeight: 700, color: "#868e96" }}>Paper</th>
                   <th style={{ textAlign: "left", padding: "6px 10px", border: "1px solid #dee2e6", fontSize: 12, fontWeight: 700, color: "#868e96" }}>GSM</th>
+                  <th style={{ textAlign: "left", padding: "6px 10px", border: "1px solid #dee2e6", fontSize: 12, fontWeight: 700, color: "#868e96" }}>Size</th>
                   <th style={{ textAlign: "right", padding: "6px 10px", border: "1px solid #dee2e6", fontSize: 12, fontWeight: 700, color: "#868e96" }}>Sheets</th>
                   <th style={{ textAlign: "right", padding: "6px 10px", border: "1px solid #dee2e6", fontSize: 12, fontWeight: 700, color: "#868e96" }}>Cost (₹)</th>
                 </tr>
@@ -1168,6 +1169,7 @@ function JobDetailModal({ job, clients, machines, staffUsers, onClose, onEdit, o
                     <td style={{ padding: "6px 10px", border: "1px solid #dee2e6", color: "#868e96" }}>{i + 1}</td>
                     <td style={{ padding: "6px 10px", border: "1px solid #dee2e6", fontWeight: 600, color: "#212529" }}>{p.paper_name || "—"}</td>
                     <td style={{ padding: "6px 10px", border: "1px solid #dee2e6", color: "#212529" }}>{p.gsm ? p.gsm + " GSM" : "—"}</td>
+                    <td style={{ padding: "6px 10px", border: "1px solid #dee2e6", color: "#212529" }}>{p.size || "—"}</td>
                     <td style={{ padding: "6px 10px", border: "1px solid #dee2e6", textAlign: "right", color: "#212529" }}>{p.sheet_count ? String(p.sheet_count) + (p.unit ? " " + p.unit : "") : "—"}</td>
                     <td style={{ padding: "6px 10px", border: "1px solid #dee2e6", textAlign: "right", color: "#212529" }}>{p.paper_cost != null ? "₹" + Number(p.paper_cost).toLocaleString("en-IN") : p.computed_cost != null ? "₹" + Number(p.computed_cost).toLocaleString("en-IN") : "—"}</td>
                   </tr>
