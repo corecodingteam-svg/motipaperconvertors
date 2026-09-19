@@ -141,6 +141,7 @@ export default function JobPrintView({ job, template, onClose }: { job: Job; tem
                     <th style={{ textAlign: "left", padding: "3px 8px", border: "1px solid #e5e7eb", fontSize: fsLabel, fontWeight: 700, color: "#6b7280" }}>#</th>
                     <th style={{ textAlign: "left", padding: "3px 8px", border: "1px solid #e5e7eb", fontSize: fsLabel, fontWeight: 700, color: "#6b7280" }}>Paper</th>
                     <th style={{ textAlign: "left", padding: "3px 8px", border: "1px solid #e5e7eb", fontSize: fsLabel, fontWeight: 700, color: "#6b7280" }}>GSM</th>
+                    <th style={{ textAlign: "left", padding: "3px 8px", border: "1px solid #e5e7eb", fontSize: fsLabel, fontWeight: 700, color: "#6b7280" }}>Size</th>
                     <th style={{ textAlign: "right", padding: "3px 8px", border: "1px solid #e5e7eb", fontSize: fsLabel, fontWeight: 700, color: "#6b7280" }}>Sheets</th>
                     <th style={{ textAlign: "right", padding: "3px 8px", border: "1px solid #e5e7eb", fontSize: fsLabel, fontWeight: 700, color: "#6b7280" }}>Cost (₹)</th>
                   </tr>
@@ -151,6 +152,7 @@ export default function JobPrintView({ job, template, onClose }: { job: Job; tem
                       <td style={{ padding: "3px 8px", border: "1px solid #e5e7eb", color: "#6b7280" }}>{i + 1}</td>
                       <td style={{ padding: "3px 8px", border: "1px solid #e5e7eb", fontWeight: 600 }}>{p.paper_name || "—"}</td>
                       <td style={{ padding: "3px 8px", border: "1px solid #e5e7eb" }}>{p.gsm ? p.gsm + " GSM" : "—"}</td>
+                      <td style={{ padding: "3px 8px", border: "1px solid #e5e7eb" }}>{p.size || "—"}</td>
                       <td style={{ padding: "3px 8px", border: "1px solid #e5e7eb", textAlign: "right" }}>{p.sheet_count ? String(p.sheet_count) + (p.unit ? " " + p.unit : "") : "—"}</td>
                       <td style={{ padding: "3px 8px", border: "1px solid #e5e7eb", textAlign: "right" }}>{p.paper_cost != null ? "₹" + Number(p.paper_cost).toLocaleString("en-IN") : p.computed_cost != null ? "₹" + Number(p.computed_cost).toLocaleString("en-IN") : "—"}</td>
                     </tr>
