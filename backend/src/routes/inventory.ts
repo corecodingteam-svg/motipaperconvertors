@@ -28,7 +28,7 @@ const PaperStockSchema = z.object({
 });
 
 router.get("/paper", requirePermission("inventory.view"), async (req, res) => {
-  const params = parseListParams(req, { sortBy: "name" });
+  const params = parseListParams(req, { sortBy: "name", sortDir: "asc" });
   const tenantId = req.user.tenantId!;
   const { type, brand, isLow, inventory_type } = req.query as Record<string, string>;
 

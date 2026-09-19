@@ -21,13 +21,15 @@ export interface ListResult<T> {
 // Parse standard list query params from a request
 export function parseListParams(
   req: Request,
-  defaults: { sortBy: string; limit?: number } = { sortBy: "created_at" },
+  defaults: { sortBy: string; limit?: number; sortDir?: "asc" | "desc" } = { sortBy: "created_at" },
 ): ListParams {
   const page = Math.max(1, parseInt((req.query.page as string) ?? "1") || 1);
   const limit = Math.min(100, Math.max(1, parseInt((req.query.limit as string) ?? String(defaults.limit ?? 20)) || 20));
   const search = (req.query.search as string)?.trim() || null;
   const sortBy = (req.query.sortBy as string) || defaults.sortBy;
-  const sortDir = (req.query.sortDir as string) === "asc" ? "asc" : "desc";
+  const sortDir = (req.query.sortDir as string) === "asc" || (req.query.sortDir as string) === "desc"
+    ? (req.query.sortDir as "asc" | "desc")
+    : (defaults.sortDir ?? "desc");
 
   return { page, limit, search, sortBy, sortDir };
 }
