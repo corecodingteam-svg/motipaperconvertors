@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Invoice – DB/INVOICEE/NHCSPL/10/07/2026</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Great+Vibes&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', 'Segoe UI', sans-serif;
+      font-size: 11.5px;
+      color: #1a1a2e;
+      background: #f0f2f5;
+    }
+
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 20px auto;
+      background: #ffffff;
+      padding: 0;
+      box-shadow: 0 4px 30px rgba(0,0,0,0.15);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* ── TOP ACCENT BAR ── */
+    .top-bar {
+      height: 6px;
+      background: linear-gradient(90deg, #1a1a2e 0%, #16213e 40%, #0f3460 70%, #1a6fd4 100%);
+    }
+
+    /* ── HEADER ── */
+    .header {
+      padding: 32px 40px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 1px solid #eef0f4;
+    }
+
+    .brand-block {}
+
+    .brand-name {
+      font-size: 19px;
+      font-weight: 700;
+      color: #1a1a2e;
+      letter-spacing: -0.3px;
+      margin-bottom: 3px;
+    }
+
+    .brand-title {
+      font-size: 10px;
+      font-weight: 500;
+      color: #1a6fd4;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      margin-bottom: 10px;
+    }
+
+    .brand-contact {
+      font-size: 10.5px;
+      color: #555;
+      line-height: 1.7;
+    }
+
+    .brand-contact span {
+      font-weight: 600;
+      color: #333;
+    }
+
+    .invoice-badge {
+      text-align: right;
+    }
+
+    .invoice-label {
+      font-size: 24px;
+      font-weight: 700;
+      color: #0f3460;
+      letter-spacing: -0.5px;
+      text-transform: uppercase;
+    }
+
+    .invoice-sub {
+      font-size: 10px;
+      color: #888;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    /* ── META STRIP ── */
+    .meta-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      background: #f7f8fc;
+      border-bottom: 1px solid #eef0f4;
+      padding: 0;
+    }
+
+    .meta-cell {
+      padding: 14px 20px;
+      border-right: 1px solid #eef0f4;
+    }
+
+    .meta-cell:last-child { border-right: none; }
+
+    .meta-label {
+      font-size: 9.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #999;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .meta-value {
+      font-size: 12px;
+      font-weight: 600;
+      color: #1a1a2e;
+    }
+
+    .section-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #1a6fd4;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    /* ── PROJECT SCOPE ── */
+    .scope-section {
+      padding: 8px 40px 16px;
+      background: #f7f8fc;
+      border-bottom: 1px solid #eef0f4;
+    }
+
+    .scope-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #0f3460;
+      margin-bottom: 2px;
+    }
+
+    .scope-sub {
+      font-size: 11px;
+      color: #777;
+    }
+
+    /* ── ITEMS TABLE ── */
+    .items-section {
+      padding: 0 40px 24px;
+    }
+
+    .items-section h3 {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #1a6fd4;
+      font-weight: 700;
+      padding: 16px 0 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead tr {
+      background: #1a1a2e;
+      color: #fff;
+    }
+
+    thead th {
+      padding: 10px 12px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      text-align: left;
+    }
+
+    thead th.right { text-align: right; }
+    thead th.center { text-align: center; }
+
+    tbody tr {
+      border-bottom: 1px solid #f0f2f5;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fafbfd;
+    }
+
+    tbody td {
+      padding: 10px 12px;
+      vertical-align: top;
+      font-size: 11px;
+      color: #333;
+    }
+
+    tbody td.right { text-align: right; }
+    tbody td.center { text-align: center; }
+
+    .item-name {
+      font-weight: 600;
+      color: #1a1a2e;
+      margin-bottom: 3px;
+    }
+
+    .item-desc {
+      font-size: 9.5px;
+      color: #777;
+      line-height: 1.5;
+    }
+
+    .sac-badge {
+      display: inline-block;
+      background: #eef0f4;
+      color: #555;
+      font-size: 9.5px;
+      padding: 1px 6px;
+      border-radius: 3px;
+      margin-top: 4px;
+      font-weight: 500;
+    }
+
+    /* ── TOTALS ── */
+    .totals-row {
+      display: flex;
+      justify-content: flex-end;
+      padding: 0 40px 0;
+    }
+
+    .totals-box {
+      width: 300px;
+      border: 1px solid #eef0f4;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .totals-line {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 16px;
+      border-bottom: 1px solid #f0f2f5;
+      font-size: 11px;
+      color: #555;
+    }
+
+    .totals-line:last-child { border-bottom: none; }
+
+    .totals-line .lbl { font-weight: 500; }
+    .totals-line .amt { font-weight: 600; color: #333; }
+
+    .totals-line.grand {
+      background: #1a1a2e;
+      color: #fff;
+      padding: 12px 16px;
+    }
+
+    .totals-line.grand .lbl {
+      font-weight: 700;
+      font-size: 12px;
+      color: #fff;
+    }
+
+    .totals-line.grand .amt {
+      font-weight: 700;
+      font-size: 13px;
+      color: #f0c040;
+    }
+
+    .totals-line.balance {
+      background: #1a6fd4;
+      color: #fff;
+    }
+
+    .totals-line.balance .lbl { color: #fff; font-weight: 700; font-size: 12px; }
+    .totals-line.balance .amt { color: #fff; font-weight: 700; font-size: 13px; }
+
+    /* ── AMOUNT IN WORDS ── */
+    .words-section {
+      padding: 16px 40px;
+    }
+
+    .words-box {
+      background: #f7f8fc;
+      border-left: 3px solid #0f3460;
+      border-radius: 0 6px 6px 0;
+      padding: 10px 14px;
+      font-size: 11.5px;
+    }
+
+    .words-box .wlbl {
+      font-size: 9.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #999;
+      font-weight: 600;
+      margin-bottom: 3px;
+    }
+
+    .words-box .wval {
+      font-weight: 600;
+      color: #1a1a2e;
+      font-size: 11px;
+    }
+
+    /* ── PAYMENT + SIGN ── */
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      padding: 20px 40px;
+      border-top: 1px solid #eef0f4;
+    }
+
+    .payment-block { padding-right: 30px; border-right: 1px solid #eef0f4; }
+    .sign-block { padding-left: 30px; text-align: right; }
+
+    .block-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #1a6fd4;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .pay-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10.5px;
+      padding: 4px 0;
+      border-bottom: 1px dashed #eef0f4;
+      color: #444;
+    }
+
+    .pay-row:last-child { border-bottom: none; }
+    .pay-row .pk { color: #888; font-weight: 500; }
+    .pay-row .pv { font-weight: 600; color: #1a1a2e; }
+
+    .sign-spacer {
+      height: 40px;
+      border-bottom: 1px solid #bbb;
+      margin-bottom: 6px;
+      width: 180px;
+      margin-left: auto;
+      position: relative;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 4px;
+    }
+
+    .signature-text {
+      font-family: 'Great Vibes', cursive;
+      font-size: 19px;
+      color: #1a237e;
+      line-height: 1;
+      transform: rotate(-4deg);
+      display: inline-block;
+      letter-spacing: 1px;
+      filter: drop-shadow(0.5px 0.5px 0px rgba(26,35,126,0.25));
+      margin-bottom: 2px;
+    }
+
+    .sign-name {
+      font-weight: 700;
+      font-size: 11px;
+      color: #1a1a2e;
+    }
+
+    .sign-title {
+      font-size: 10.5px;
+      color: #777;
+      margin-top: 2px;
+    }
+
+    .sign-date {
+      font-size: 10.5px;
+      color: #999;
+      margin-top: 4px;
+    }
+
+    /* ── TERMS ── */
+    .terms-section {
+      padding: 16px 40px 20px;
+      border-top: 1px solid #eef0f4;
+    }
+
+    .terms-section h4 {
+      font-size: 9.5px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #999;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .terms-section ol {
+      padding-left: 18px;
+      color: #777;
+      font-size: 10.5px;
+      line-height: 1.8;
+    }
+
+    /* ── FOOTER ── */
+    .footer {
+      background: #1a1a2e;
+      color: #aaa;
+      text-align: center;
+      font-size: 10px;
+      padding: 10px 40px;
+      letter-spacing: 0.3px;
+    }
+
+    .footer span { color: #f0c040; font-weight: 600; }
+
+    /* ── PRINT ── */
+    @media print {
+      body { background: #fff; }
+      .page {
+        margin: 0;
+        box-shadow: none;
+        width: 100%;
+        min-height: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- TOP ACCENT BAR -->
+  <div class="top-bar"></div>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="brand-block">
+      <div class="brand-name">Divya Bhardwaj</div>
+      <div class="brand-title">Freelance Technical Architect &amp; Lead Developer</div>
+      <div class="brand-contact">
+        A 154, Vidhyut Nagar, Ajmer Road<br/>
+        Jaipur, Rajasthan – 302021
+      </div>
+    </div>
+    <div class="invoice-badge">
+      <div class="invoice-label">Invoice</div>
+      <div class="invoice-sub">Professional Services</div>
+    </div>
+  </div>
+
+  <!-- META STRIP -->
+  <div class="meta-strip">
+    <div class="meta-cell">
+      <div class="meta-label">Invoice No.</div>
+      <div class="meta-value" style="font-size:10px;">DB/INVOICEE/NHCSPL/10/07/2026</div>
+    </div>
+    <div class="meta-cell">
+      <div class="meta-label">Invoice Date</div>
+      <div class="meta-value">10 July 2026</div>
+    </div>
+    <div class="meta-cell">
+      <div class="meta-label">Due Date</div>
+      <div class="meta-value">10 August 2026</div>
+    </div>
+    <div class="meta-cell">
+      <div class="meta-label">Payment Terms</div>
+      <div class="meta-value">Net 30 Days</div>
+    </div>
+  </div>
+
+  <!-- PROJECT SCOPE -->
+  <div class="scope-section">
+    <div class="section-label">Project</div>
+    <div class="scope-title">MotiPaper — Multi-Tenant SaaS Platform for Printing Presses</div>
+    <div class="scope-sub">End-to-end design, development, integration &amp; maintenance — delivered by Divya Bhardwaj</div>
+  </div>
+
+  <!-- ITEMS TABLE -->
+  <div class="items-section">
+    <h3>Services &amp; Deliverables</h3>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:28px;" class="center">#</th>
+          <th>Description</th>
+          <th class="center" style="width:60px;">SAC</th>
+          <th class="center" style="width:36px;">Qty</th>
+          <th class="right" style="width:100px;">Rate (₹)</th>
+          <th class="right" style="width:100px;">Amount (₹)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="center" style="color:#888;font-weight:600;">01</td>
+          <td>
+            <div class="item-name">Software Development</div>
+            <div class="item-desc">Full-stack development of MotiPaper SaaS platform — backend (Node.js / TypeScript), admin panel (React / Vite), mobile application (Flutter), PostgreSQL database design, Docker &amp; Nginx production deployment.</div>
+            <span class="sac-badge">SAC 998314</span>
+          </td>
+          <td class="center">998314</td>
+          <td class="center">1</td>
+          <td class="right">1,50,000</td>
+          <td class="right"><strong>1,50,000</strong></td>
+        </tr>
+        <tr>
+          <td class="center" style="color:#888;font-weight:600;">02</td>
+          <td>
+            <div class="item-name">SMS &amp; WhatsApp API Integration</div>
+            <div class="item-desc">Third-party SMS gateway and WhatsApp Business API — setup, integration, configuration, template management, and end-to-end testing across the platform.</div>
+            <span class="sac-badge">SAC 998313</span>
+          </td>
+          <td class="center">998313</td>
+          <td class="center">1</td>
+          <td class="right">15,000</td>
+          <td class="right"><strong>15,000</strong></td>
+        </tr>
+        <tr>
+          <td class="center" style="color:#888;font-weight:600;">03</td>
+          <td>
+            <div class="item-name">UI / UX Design</div>
+            <div class="item-desc">Wireframing, screen design, design system, brand assets, and responsive UI for admin panel and mobile application.</div>
+            <span class="sac-badge">SAC 998311</span>
+          </td>
+          <td class="center">998311</td>
+          <td class="center">1</td>
+          <td class="right">15,500</td>
+          <td class="right"><strong>15,500</strong></td>
+        </tr>
+        <tr>
+          <td class="center" style="color:#888;font-weight:600;">04</td>
+          <td>
+            <div class="item-name">Server Infrastructure &amp; Deployment</div>
+            <div class="item-desc">VPS provisioning, Nginx reverse proxy, MinIO object storage, SSL/TLS setup, CI/CD pipeline, Docker orchestration — first year of server cost.</div>
+            <span class="sac-badge">SAC 998316</span>
+          </td>
+          <td class="center">998316</td>
+          <td class="center">1</td>
+          <td class="right">17,000</td>
+          <td class="right"><strong>17,000</strong></td>
+        </tr>
+        <tr>
+          <td class="center" style="color:#888;font-weight:600;">05</td>
+          <td>
+            <div class="item-name">Annual Maintenance Contract (AMC)</div>
+            <div class="item-desc">Post-launch technical support, bug fixes, minor feature updates, uptime monitoring, and security patch management — Year 1.</div>
+            <span class="sac-badge">SAC 998315</span>
+          </td>
+          <td class="center">998315</td>
+          <td class="center">1</td>
+          <td class="right">13,000</td>
+          <td class="right"><strong>13,000</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- TOTALS -->
+  <div class="totals-row">
+    <div class="totals-box">
+      <div class="totals-line">
+        <span class="lbl">Subtotal</span>
+        <span class="amt">₹ 2,10,500</span>
+      </div>
+      <div class="totals-line">
+        <span class="lbl" style="color:#888;font-size:11px;">Tax / GST</span>
+        <span class="amt" style="color:#888;font-size:11px;">Not Applicable*</span>
+      </div>
+      <div class="totals-line grand">
+        <span class="lbl">TOTAL</span>
+        <span class="amt">₹ 2,10,500</span>
+      </div>
+      <div class="totals-line">
+        <span class="lbl">Amount Paid</span>
+        <span class="amt">₹ 0.00</span>
+      </div>
+      <div class="totals-line balance">
+        <span class="lbl">BALANCE DUE</span>
+        <span class="amt">₹ 2,10,500</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- AMOUNT IN WORDS -->
+  <div class="words-section">
+    <div class="words-box">
+      <div class="wlbl">Amount in Words</div>
+      <div class="wval">Rupees Two Lakh Ten Thousand Five Hundred Only</div>
+    </div>
+    <p style="font-size:10px;color:#aaa;margin-top:8px;">* GST not applicable as the service provider is not registered under GST. Subject to reverse charge mechanism as applicable under prevailing GST rules.</p>
+  </div>
+
+  <!-- SIGN -->
+  <div style="padding: 20px 40px; border-top: 1px solid #eef0f4; text-align: right;">
+    <div class="block-label">Authorized Signatory</div>
+    <div class="sign-spacer">
+      <span class="signature-text">Divya Bhardwaj</span>
+    </div>
+    <div class="sign-name">Divya Bhardwaj</div>
+    <div class="sign-title">Freelance Technical Architect &amp; Lead Developer</div>
+    <div class="sign-date">Date: 10 July 2026</div>
+  </div>
+
+  <!-- TERMS -->
+  <div class="terms-section">
+    <h4>Terms &amp; Conditions</h4>
+    <ol>
+      <li>Payment is due within <strong>30 days</strong> of the invoice date.</li>
+      <li>This invoice covers services for the <strong>MotiPaper</strong> platform as detailed above.</li>
+      <li>The Annual Maintenance Contract (Item 5) commences from the date of project go-live.</li>
+      <li>Server costs (Item 4) cover the first year of infrastructure. Subsequent years billed separately.</li>
+      <li>Any additional scope or features beyond the above will be quoted and invoiced separately.</li>
+      <li>Disputes, if any, are subject to the jurisdiction of Jaipur courts.</li>
+    </ol>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    Thank you for your business &nbsp;|&nbsp; Invoice generated by <span>Divya Bhardwaj</span> &nbsp;|&nbsp; Jaipur, Rajasthan
+  </div>
+
+</div>
+
+</body>
+</html>

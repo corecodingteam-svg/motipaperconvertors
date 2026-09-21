@@ -17,3 +17,4 @@ mobile/pubspec.lock
 
 # Docker
 *.pid
+ios_signing/
