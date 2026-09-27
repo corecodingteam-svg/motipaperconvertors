@@ -40,7 +40,7 @@ export default function PaperRateModal({ onClose }: Props) {
 
   const { data: paperData, isLoading } = useQuery({
     queryKey: ["paper-rate-all"],
-    queryFn: () => api.get("/admin/inventory/paper", { params: { limit: 200 } }).then(r => r.data.data ?? []),
+    queryFn: () => api.get("/admin/inventory/paper", { params: { limit: 5000 } }).then(r => r.data.data ?? []),
   });
 
   const papers: PaperItem[] = paperData ?? [];

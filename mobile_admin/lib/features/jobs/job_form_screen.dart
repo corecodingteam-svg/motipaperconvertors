@@ -221,7 +221,7 @@ class _JobFormScreenState extends State<JobFormScreen> {
         ApiClient.instance.get('/admin/clients', queryParameters: {'limit': 200}),
         ApiClient.instance.get('/admin/machines', queryParameters: {'limit': 100}),
         ApiClient.instance.get('/admin/users', queryParameters: {'limit': 200, 'status': 'active'}),
-        ApiClient.instance.get('/admin/inventory/paper', queryParameters: {'limit': 200, 'inventory_type': inventoryType}),
+        ApiClient.instance.get('/admin/inventory/paper', queryParameters: {'limit': 5000, 'inventory_type': inventoryType}),
         ApiClient.instance.get('/admin/settings/job-types'),
       ]);
       if (!mounted) return;
@@ -241,7 +241,7 @@ class _JobFormScreenState extends State<JobFormScreen> {
   Future<void> _reloadPaperStock() async {
     final inventoryType = _data.orderType == 'external' ? 'external' : 'in_house';
     try {
-      final res = await ApiClient.instance.get('/admin/inventory/paper', queryParameters: {'limit': 200, 'inventory_type': inventoryType});
+      final res = await ApiClient.instance.get('/admin/inventory/paper', queryParameters: {'limit': 5000, 'inventory_type': inventoryType});
       if (!mounted) return;
       setState(() {
         _paperStock = (res.data['data'] as List? ?? []).map((e) => _Option(e['id'] as String, '${e['name']} ${e['gsm'] != null ? "${e['gsm']}gsm" : ""} ${e['size'] ?? ""}'.trim())).toList();

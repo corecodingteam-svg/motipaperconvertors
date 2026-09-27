@@ -28,7 +28,8 @@ const PaperStockSchema = z.object({
 });
 
 router.get("/paper", requirePermission("inventory.view"), async (req, res) => {
-  const params = parseListParams(req, { sortBy: "name", sortDir: "asc" });
+  // Higher cap: job-form dropdowns and export fetch the full paper list in one call
+  const params = parseListParams(req, { sortBy: "name", sortDir: "asc", maxLimit: 5000 });
   const tenantId = req.user.tenantId!;
   const { type, brand, isLow, inventory_type } = req.query as Record<string, string>;
 
