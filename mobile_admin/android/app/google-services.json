@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1011644551258:android:69512313930a6111ae0863",
+        "mobilesdk_app_id": "1:1011644551258:android:5414f5fa088068bbae0863",
         "android_client_info": {
-          "package_name": "com.motipaperconvertors.motipaper_admin"
+          "package_name": "com.motipaper.admin"
         }
       },
       "oauth_client": [],

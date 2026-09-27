@@ -1,4 +1,4 @@
-package com.motipaperconvertors.motipaper_admin
+package com.motipaper.admin
 
 import io.flutter.embedding.android.FlutterActivity
 
