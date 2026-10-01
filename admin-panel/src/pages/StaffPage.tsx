@@ -1,4 +1,5 @@
 import { toast } from "sonner";
+import SearchableSelect from "../components/SearchableSelect.tsx";
 import { useHasPerm } from "../store/auth.ts";
 import TableSkeleton from "../components/TableSkeleton.tsx";
 import PrintListButton from "../components/PrintListButton.tsx";
@@ -112,19 +113,11 @@ function StaffModal({
           )}
           <label style={labelStyle}>
             Staff Type
-            <select style={inputStyle} value={form.staffType} onChange={set("staffType")}>
-              <option value="">— select staff type —</option>
-              {staffTypes.map(st => (
-                <option key={st.id} value={st.name}>{st.name}</option>
-              ))}
-            </select>
+<SearchableSelect options={staffTypes.map(st => ({ value: st.name, label: st.name }))} value={form.staffType} onChange={v => setForm(f => ({ ...f, staffType: v }))} placeholder="— select staff type —" />
           </label>
           <label style={labelStyle}>
             Status
-            <select style={inputStyle} value={form.status} onChange={set("status")}>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
+<SearchableSelect options={[{ value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }]} value={form.status} onChange={v => setForm(f => ({ ...f, status: v }))} placeholder="— select —" />
           </label>
         </div>
         {Object.values(fieldErrors).some(Boolean) && <div style={{ color: "#c92a2a", fontSize: 13, marginTop: 12, fontWeight: 500 }}>Please fix the errors above.</div>}

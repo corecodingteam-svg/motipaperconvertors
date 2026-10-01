@@ -208,6 +208,7 @@ class JobPaper {
   final String id;
   final String paperStockId;
   final String? paperName;
+  final String? paperSource;
   final int? gsm;
   final String? size;
   final String? unit;
@@ -219,6 +220,7 @@ class JobPaper {
     required this.id,
     required this.paperStockId,
     this.paperName,
+    this.paperSource,
     this.gsm,
     this.size,
     this.unit,
@@ -233,6 +235,7 @@ class JobPaper {
     id: j['id'] as String,
     paperStockId: j['paper_stock_id'] as String,
     paperName: j['paper_name'] as String?,
+    paperSource: j['paper_source'] as String?,
     gsm: j['gsm'] as int?,
     size: j['size'] as String?,
     unit: j['unit'] as String?,

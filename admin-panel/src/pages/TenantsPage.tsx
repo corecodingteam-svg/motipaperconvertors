@@ -1,4 +1,5 @@
 import { fmtDate } from "../lib/fmtDate.ts";
+import SearchableSelect from "../components/SearchableSelect.tsx";
 import TableSkeleton from "../components/TableSkeleton.tsx";
 import { statusLabel } from "../theme.ts";
 import IconButton from "../components/IconButton.tsx";
@@ -56,9 +57,7 @@ function NewTenantForm({ onClose }: { onClose: () => void }) {
         <label><span style={{ fontSize: 13 }}>Phone</span><input style={inputStyle} value={form.phone} onChange={set("phone")} /></label>
         <label><span style={{ fontSize: 13 }}>City</span><input style={inputStyle} value={form.city} onChange={set("city")} /></label>
         <label><span style={{ fontSize: 13 }}>Plan</span>
-          <select style={inputStyle} value={form.plan} onChange={set("plan")}>
-            <option value="free">Free</option><option value="starter">Starter</option><option value="pro">Pro</option>
-          </select>
+<SearchableSelect options={[{ value: "free", label: "Free" }, { value: "starter", label: "Starter" }, { value: "pro", label: "Pro" }]} value={form.plan} onChange={v => setForm(f => ({ ...f, plan: v }))} placeholder="— select —" />
         </label>
       </div>
       <div style={{ fontSize: 12, fontWeight: 700, color: "#888", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Owner Account</div>

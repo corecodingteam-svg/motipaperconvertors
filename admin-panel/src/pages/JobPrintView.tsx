@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { fmtDate, fmtDateTime } from "../lib/fmtDate.ts";
 
-interface JobPaper { paper_name?: string; gsm?: number; size?: string; sheet_count: number; unit?: string; paper_cost?: number; computed_cost?: number; }
+interface JobPaper { paper_name?: string; paper_source?: string; gsm?: number; size?: string; sheet_count: number; unit?: string; paper_cost?: number; computed_cost?: number; }
 
 interface Job {
   id: string; job_number: number; title: string; client_name: string; client_company_name: string; client_phone: string; created_at?: string; machine_id: string;
@@ -149,7 +149,7 @@ export default function JobPrintView({ job, template, onClose }: { job: Job; tem
                   {(job.papers && job.papers.length > 0 ? job.papers : [{ paper_name: job.paper_type, gsm: job.paper_gsm, sheet_count: job.sheet_count }]).map((p, i) => (
                     <tr key={i}>
                       <td style={{ padding: "3px 8px", border: "1px solid #e5e7eb", color: "#6b7280" }}>{i + 1}</td>
-                      <td style={{ padding: "3px 8px", border: "1px solid #e5e7eb", fontWeight: 600 }}>{p.paper_name || "—"}</td>
+                      <td style={{ padding: "3px 8px", border: "1px solid #e5e7eb", fontWeight: 600 }}>{p.paper_name || "—"}{p.paper_source ? ` (${p.paper_source})` : ""}</td>
                       <td style={{ padding: "3px 8px", border: "1px solid #e5e7eb" }}>{p.gsm ? p.gsm + " GSM" : "—"}</td>
                       <td style={{ padding: "3px 8px", border: "1px solid #e5e7eb" }}>{p.size || "—"}</td>
                       <td style={{ padding: "3px 8px", border: "1px solid #e5e7eb", textAlign: "right" }}>{p.sheet_count ? String(p.sheet_count) + (p.unit ? " " + p.unit : "") : "—"}</td>

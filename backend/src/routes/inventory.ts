@@ -54,8 +54,8 @@ router.get("/paper", requirePermission("inventory.view"), async (req, res) => {
     countQ = countQ.whereRaw("quantity <= low_stock_threshold");
   }
 
-  base = applySearch(base, params.search, ["name", "brand", "type", "size"]);
-  countQ = applySearch(countQ, params.search, ["name", "brand", "type", "size"]);
+  base = applySearch(base, params.search, ["name", "brand", "type", "size", "paper_source"]);
+  countQ = applySearch(countQ, params.search, ["name", "brand", "type", "size", "paper_source"]);
 
   const result = await paginate(base, countQ, params, PAPER_SORT_COLS);
   result.data = result.data.map((i: Record<string, unknown>) => ({

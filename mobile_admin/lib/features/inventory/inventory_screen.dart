@@ -640,6 +640,8 @@ class _PaperCard extends StatelessWidget {
           ]),
           if (paper.brand != null || paper.gsm != null || paper.size != null)
             Text([if (paper.brand != null) paper.brand!, if (paper.gsm != null) '${paper.gsm} GSM', if (paper.size != null) paper.size!].join(' · '), style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+          if (paper.inventoryType == 'external' && paper.paperSource?.isNotEmpty == true)
+            Text('Provider: ${paper.paperSource}', style: const TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600)),
           if (paper.costPerUnit != null) Text('₹${paper.costPerUnit!.toStringAsFixed(2)} / ${paper.unit ?? 'sheet'}', style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
         ])),
         const SizedBox(width: 12),

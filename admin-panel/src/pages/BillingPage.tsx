@@ -1,4 +1,5 @@
 import { toast } from "sonner";
+import SearchableSelect from "../components/SearchableSelect.tsx";
 import { fmtDate } from "../lib/fmtDate.ts";
 import { useHasPerm } from "../store/auth.ts";
 import TableSkeleton from "../components/TableSkeleton.tsx";
@@ -85,16 +86,10 @@ function InvoiceForm({ clients, initial, onClose }: { clients: Client[]; initial
       <h3 style={{ marginBottom: 16 }}>{isEdit ? `Edit Invoice #${initial!.invoice_number}` : "New Invoice"}</h3>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
         <label><span style={{ fontSize: 13 }}>Client *</span>
-          <select style={inputStyle} value={form.clientId} onChange={set("clientId")}>
-            <option value="">— select client —</option>
-            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+<SearchableSelect options={clients.map(c => ({ value: c.id, label: c.name }))} value={form.clientId} onChange={v => setForm(f => ({ ...f, clientId: v }))} placeholder="— select client —" />
         </label>
         <label><span style={{ fontSize: 13 }}>Job (Ready)</span>
-          <select style={inputStyle} value={form.jobId} onChange={set("jobId")}>
-            <option value="">— optional —</option>
-            {jobs.map(j => <option key={j.id} value={j.id}>#{j.job_number} {j.title}</option>)}
-          </select>
+<SearchableSelect options={jobs.map(j => ({ value: j.id, label: `#${j.job_number} ${j.title}` }))} value={form.jobId} onChange={v => setForm(f => ({ ...f, jobId: v }))} placeholder="— optional —" />
         </label>
         <label><span style={{ fontSize: 13 }}>Due Date</span><input style={inputStyle} type="date" value={form.dueDate} onChange={set("dueDate")} /></label>
         <label><span style={{ fontSize: 13 }}>GST %</span><input style={inputStyle} type="number" value={form.gstPercent} onChange={set("gstPercent")} /></label>
@@ -145,9 +140,7 @@ function RecordPaymentForm({ invoiceId, clientId, onClose }: { invoiceId: string
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
         <label><span style={{ fontSize: 13 }}>Amount (₹) *</span><input style={inputStyle} type="number" value={form.amount} onChange={set("amount")} /></label>
         <label><span style={{ fontSize: 13 }}>Mode</span>
-          <select style={inputStyle} value={form.paymentMode} onChange={set("paymentMode")}>
-            {["cash","upi","cheque","neft","rtgs","other"].map(m => <option key={m} value={m}>{m.toUpperCase()}</option>)}
-          </select>
+<SearchableSelect options={["cash","upi","cheque","neft","rtgs","other"].map(m => ({ value: m, label: m.toUpperCase() }))} value={form.paymentMode} onChange={v => setForm(f => ({ ...f, paymentMode: v }))} placeholder="— select —" />
         </label>
         <label><span style={{ fontSize: 13 }}>Ref / Cheque No.</span><input style={inputStyle} value={form.referenceNumber} onChange={set("referenceNumber")} /></label>
         <label><span style={{ fontSize: 13 }}>Notes</span><input style={inputStyle} value={form.notes} onChange={set("notes")} /></label>

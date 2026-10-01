@@ -1,4 +1,5 @@
 import { toast } from "sonner";
+import SearchableSelect from "../components/SearchableSelect.tsx";
 import PrintListButton from "../components/PrintListButton.tsx";
 import IconButton from "../components/IconButton.tsx";
 import "../components/TableSkeleton.tsx";
@@ -40,11 +41,7 @@ function MachineForm({ initial, onSave, onCancel }: { initial?: Partial<Machine>
         <label><span style={{ fontSize: 13 }}>Model</span><input style={inputStyle} value={form.model} onChange={set("model")} /></label>
         <label><span style={{ fontSize: 13 }}>Max Colors</span><input style={inputStyle} type="number" value={form.max_colors} onChange={set("max_colors")} /></label>
         <label><span style={{ fontSize: 13 }}>Status</span>
-          <select style={inputStyle} value={form.status} onChange={set("status")}>
-            <option value="active">Active</option>
-            <option value="maintenance">Maintenance</option>
-            <option value="inactive">Inactive</option>
-          </select>
+<SearchableSelect options={[{ value: "active", label: "Active" }, { value: "maintenance", label: "Maintenance" }, { value: "inactive", label: "Inactive" }]} value={form.status} onChange={v => setForm(f => ({ ...f, status: v }))} placeholder="— select —" />
         </label>
       </div>
       <label><span style={{ fontSize: 13 }}>Notes</span><textarea style={{ ...inputStyle, height: 64 }} value={form.notes} onChange={set("notes")} /></label>

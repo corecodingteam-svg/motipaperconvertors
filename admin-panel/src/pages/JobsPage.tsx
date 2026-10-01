@@ -52,12 +52,12 @@ type Job = {
   advance_amount: number; quotation_ref: string; indent_number: string;
   delivery_quantity: number; challan_number: string; challan_date: string;
   tax_invoice_no: string; invoice_date: string;
-  papers?: { paper_name?: string; gsm?: number; size?: string; sheet_count: number; unit?: string; paper_cost?: number; computed_cost?: number; paper_stock_id?: string }[];
+  papers?: { paper_name?: string; gsm?: number; size?: string; sheet_count: number; unit?: string; paper_cost?: number; computed_cost?: number; paper_stock_id?: string; paper_source?: string }[];
 };
 
 interface Client { id: string; name: string; }
 interface Machine { id: string; name: string; }
-interface PaperStock { id: string; name: string; gsm: number; size: string; unit: string; quantity: number; }
+interface PaperStock { id: string; name: string; gsm: number; size: string; unit: string; quantity: number; paper_source?: string | null; }
 interface StaffUser { id: string; name: string; role: string; }
 interface SettingItem { id: string; name: string; }
 
@@ -511,7 +511,7 @@ function JobForm({ initial, initialPapers, clients, machines, plateSources, onCr
   const plateSourceOptions = plateSources.map(p => ({ value: p.name, label: p.name }));
   const jobTypeOptions = jobTypes.map(jt => ({ value: jt.name, label: jt.name }));
   const printColorOptions = printColors.map(pc => ({ value: pc.name, label: pc.name }));
-  const paperOptions = paperStocks.map(p => ({ value: p.id, label: `${p.name} ${p.gsm}gsm ${p.size}` }));
+  const paperOptions = paperStocks.map(p => ({ value: p.id, label: `${p.name} ${p.gsm}gsm ${p.size}${p.paper_source ? ` · ${p.paper_source}` : ""}` }));
   const staffOptions = staffUsers.map(u => ({ value: u.id, label: u.name }));
   const orderTypeOptions = [
     { value: "in_house", label: "In House" },
@@ -848,11 +848,12 @@ function JobForm({ initial, initialPapers, clients, machines, plateSources, onCr
           <div style={{ ...gridStyle, marginBottom: 20 }}>
             <label style={labelStyle}>
               Binding Type
-              <select style={inputStyle} value={form.binding_type as string} onChange={e => setForm(f => ({ ...f, binding_type: e.target.value }))}>
-                <option value="">— select type —</option>
-                {bindingTypes.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
-                {form.binding_type && !bindingTypes.some(b => b.name === form.binding_type) && <option value={form.binding_type as string}>{form.binding_type as string}</option>}
-              </select>
+              <SearchableSelect
+                options={[...bindingTypes.map(b => b.name), ...(form.binding_type && !bindingTypes.some(b => b.name === form.binding_type) ? [form.binding_type as string] : [])].map(n => ({ value: n, label: n }))}
+                value={form.binding_type as string}
+                onChange={v => setForm(f => ({ ...f, binding_type: v }))}
+                placeholder="— select type —"
+              />
             </label>
           </div>
         )}
@@ -860,11 +861,12 @@ function JobForm({ initial, initialPapers, clients, machines, plateSources, onCr
           <div style={{ ...gridStyle, marginBottom: 20 }}>
             <label style={labelStyle}>
               Lamination Type
-              <select style={inputStyle} value={form.lamination_type as string} onChange={e => setForm(f => ({ ...f, lamination_type: e.target.value }))}>
-                <option value="">— select type —</option>
-                <option value="gloss">Gloss</option>
-                <option value="matte">Matte</option>
-              </select>
+              <SearchableSelect
+                options={[{ value: "gloss", label: "Gloss" }, { value: "matte", label: "Matte" }]}
+                value={form.lamination_type as string}
+                onChange={v => setForm(f => ({ ...f, lamination_type: v }))}
+                placeholder="— select type —"
+              />
             </label>
           </div>
         )}
@@ -1183,7 +1185,7 @@ function JobDetailModal({ job, clients, machines, staffUsers, onClose, onEdit, o
                 ).map((p, i) => (
                   <tr key={i} style={{ borderBottom: "1px solid #f1f3f5" }}>
                     <td style={{ padding: "6px 10px", border: "1px solid #dee2e6", color: "#868e96" }}>{i + 1}</td>
-                    <td style={{ padding: "6px 10px", border: "1px solid #dee2e6", fontWeight: 600, color: "#212529" }}>{p.paper_name || "—"}</td>
+                    <td style={{ padding: "6px 10px", border: "1px solid #dee2e6", fontWeight: 600, color: "#212529" }}>{p.paper_name || "—"}{p.paper_source ? <span style={{ fontWeight: 400, color: "#868e96" }}> · {p.paper_source}</span> : null}</td>
                     <td style={{ padding: "6px 10px", border: "1px solid #dee2e6", color: "#212529" }}>{p.gsm ? p.gsm + " GSM" : "—"}</td>
                     <td style={{ padding: "6px 10px", border: "1px solid #dee2e6", color: "#212529" }}>{p.size || "—"}</td>
                     <td style={{ padding: "6px 10px", border: "1px solid #dee2e6", textAlign: "right", color: "#212529" }}>{p.sheet_count ? String(p.sheet_count) + (p.unit ? " " + p.unit : "") : "—"}</td>

@@ -1,4 +1,5 @@
 import { toast } from "sonner";
+import SearchableSelect from "../components/SearchableSelect.tsx";
 import { useHasPerm } from "../store/auth.ts";
 import TableSkeleton from "../components/TableSkeleton.tsx";
 import PrintListButton from "../components/PrintListButton.tsx";
@@ -58,10 +59,7 @@ function QuotationForm({ initial, jobs, onSave, onCancel, isPending }: {
       <h3 style={{ marginBottom: 16 }}>{initial?.id ? "Edit Quotation" : "New Quotation"}</h3>
       {!initial?.id && (
         <label style={{ display: "block", marginBottom: 16 }}><span style={{ fontSize: 13 }}>Job *</span>
-          <select style={inputStyle} value={form.jobId} onChange={set("jobId")}>
-            <option value="">— select job —</option>
-            {jobs.map(j => <option key={j.id} value={j.id}>#{j.job_number} {j.title} {j.client_name ? `· ${j.client_name}` : ""}</option>)}
-          </select>
+<SearchableSelect options={jobs.map(j => ({ value: j.id, label: `#${j.job_number} ${j.title} ${j.client_name ? `· ${j.client_name}` : ""}` }))} value={form.jobId} onChange={v => setForm(f => ({ ...f, jobId: v }))} placeholder="— select job —" />
         </label>
       )}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>

@@ -322,7 +322,7 @@ class _PapersCard extends StatelessWidget {
     children: papers.map((p) {
       final cost = p.effectiveCost;
       final costStr = cost != null ? ' — ₹${cost.toStringAsFixed(0)}' : '';
-      return _InfoRow('${p.paperName ?? 'Paper'}${p.gsm != null ? " ${p.gsm}gsm" : ""}', '${p.sheetCount} sheets$costStr');
+      return _InfoRow('${p.paperName ?? 'Paper'}${p.gsm != null ? " ${p.gsm}gsm" : ""}${p.paperSource != null && p.paperSource!.isNotEmpty ? " · ${p.paperSource}" : ""}', '${p.sheetCount} sheets$costStr');
     }).toList(),
   );
 }

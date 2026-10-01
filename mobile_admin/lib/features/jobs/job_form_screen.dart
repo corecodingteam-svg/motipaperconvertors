@@ -234,7 +234,7 @@ class _JobFormScreenState extends State<JobFormScreen> {
         _clients = (results[0].data['data'] as List? ?? []).map((e) => _Option(e['id'] as String, e['company_name'] as String? ?? e['name'] as String? ?? '')).toList();
         _machines = (results[1].data['data'] as List? ?? []).map((e) => _Option(e['id'] as String, e['name'] as String? ?? '')).toList();
         _staff = (results[2].data['data'] as List? ?? []).map((e) => _Option(e['id'] as String, e['name'] as String? ?? '')).toList();
-        _paperStock = (results[3].data['data'] as List? ?? []).map((e) => _Option(e['id'] as String, '${e['name']} ${e['gsm'] != null ? "${e['gsm']}gsm" : ""} ${e['size'] ?? ""}'.trim())).toList();
+        _paperStock = (results[3].data['data'] as List? ?? []).map((e) => _Option(e['id'] as String, '${e['name']} ${e['gsm'] != null ? "${e['gsm']}gsm" : ""} ${e['size'] ?? ""}${(e['paper_source'] as String?)?.isNotEmpty == true ? " · ${e['paper_source']}" : ""}'.trim())).toList();
         _jobTypes = (results[4].data as List? ?? []).map((e) => e['name'] as String? ?? '').where((s) => s.isNotEmpty).toList();
         _bindingTypes = (results[5].data as List? ?? []).map((e) => e['name'] as String? ?? '').where((s) => s.isNotEmpty).toList();
         _loadingMeta = false;
@@ -250,7 +250,7 @@ class _JobFormScreenState extends State<JobFormScreen> {
       final res = await ApiClient.instance.get('/admin/inventory/paper', queryParameters: {'limit': 5000, 'inventory_type': inventoryType});
       if (!mounted) return;
       setState(() {
-        _paperStock = (res.data['data'] as List? ?? []).map((e) => _Option(e['id'] as String, '${e['name']} ${e['gsm'] != null ? "${e['gsm']}gsm" : ""} ${e['size'] ?? ""}'.trim())).toList();
+        _paperStock = (res.data['data'] as List? ?? []).map((e) => _Option(e['id'] as String, '${e['name']} ${e['gsm'] != null ? "${e['gsm']}gsm" : ""} ${e['size'] ?? ""}${(e['paper_source'] as String?)?.isNotEmpty == true ? " · ${e['paper_source']}" : ""}'.trim())).toList();
         final validIds = _paperStock.map((o) => o.id).toSet();
         _data.papers = _data.papers.where((p) => validIds.contains(p.paperStockId)).toList();
       });

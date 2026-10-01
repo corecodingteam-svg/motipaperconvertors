@@ -1,4 +1,5 @@
 import { toast } from "sonner";
+import SearchableSelect from "../components/SearchableSelect.tsx";
 import { fmtDate } from "../lib/fmtDate.ts";
 import { useHasPerm } from "../store/auth.ts";
 import TableSkeleton from "../components/TableSkeleton.tsx";
@@ -96,10 +97,7 @@ function TxnForm({ target, onClose }: { target: { id: string; isPaper: boolean; 
       <h3 style={{ marginBottom: 16 }}>Record Transaction — {target.name}</h3>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
         <label><span style={{ fontSize: 13 }}>Type</span>
-          <select style={inputStyle} value={form.type} onChange={set("type")}>
-            <option value="in">Stock In</option><option value="out">Stock Out</option>
-            <option value="wastage">Wastage</option><option value="adjustment">Adjustment</option>
-          </select>
+<SearchableSelect options={[{ value: "in", label: "Stock In" }, { value: "out", label: "Stock Out" }, { value: "wastage", label: "Wastage" }, { value: "adjustment", label: "Adjustment" }]} value={form.type} onChange={v => setForm(f => ({ ...f, type: v }))} placeholder="— select —" />
         </label>
         <label style={{ display: "flex", flexDirection: "column" }}>
           <span style={{ fontSize: 13 }}>Quantity *</span>
@@ -162,18 +160,16 @@ function PaperForm({ initial, defaultInventoryType, onSave, onCancel, isPending 
         <label><span style={{ fontSize: 13 }}>Reorder Level</span><input style={inputStyle} type="number" value={form.low_stock_threshold} onChange={set("low_stock_threshold")} /></label>
         <label><span style={{ fontSize: 13 }}>Cost/Unit (₹)</span><input style={inputStyle} type="number" value={form.cost_per_unit} onChange={set("cost_per_unit")} /></label>
         <label><span style={{ fontSize: 13 }}>Inventory Type</span>
-          <select style={inputStyle} value={form.inventory_type} onChange={set("inventory_type")}>
-            <option value="in_house">In House</option>
-            <option value="external">External</option>
-          </select>
+<SearchableSelect options={[{ value: "in_house", label: "In House" }, { value: "external", label: "External" }]} value={form.inventory_type} onChange={v => setForm(f => ({ ...f, inventory_type: v as PaperInvTab }))} placeholder="— select —" />
         </label>
         {form.inventory_type === "external" ? (
           <label><span style={{ fontSize: 13 }}>Provider</span>
-            <select style={inputStyle} value={form.paper_source} onChange={set("paper_source")}>
-              <option value="">— select provider —</option>
-              {providers.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
-              {form.paper_source && !providers.some(p => p.name === form.paper_source) && <option value={form.paper_source}>{form.paper_source}</option>}
-            </select>
+            <SearchableSelect
+              options={[...providers.map(p => p.name), ...(form.paper_source && !providers.some(p => p.name === form.paper_source) ? [form.paper_source] : [])].map(n => ({ value: n, label: n }))}
+              value={form.paper_source}
+              onChange={v => setForm(f => ({ ...f, paper_source: v }))}
+              placeholder="— select provider —"
+            />
           </label>
         ) : (
           <label><span style={{ fontSize: 13 }}>Paper Source</span><input style={inputStyle} placeholder="Supplier / vendor" value={form.paper_source} onChange={set("paper_source")} /></label>
@@ -217,10 +213,7 @@ function ItemForm({ initial, onSave, onCancel, isPending }: { initial?: Partial<
           {nameError && <span style={fieldErrText}>{nameError}</span>}
         </label>
         <label><span style={{ fontSize: 13 }}>Category</span>
-          <select style={inputStyle} value={form.category} onChange={set("category")}>
-            <option value="ink">Ink</option><option value="plate">Plate</option>
-            <option value="consumable">Consumable</option><option value="other">Other</option>
-          </select>
+<SearchableSelect options={[{ value: "ink", label: "Ink" }, { value: "plate", label: "Plate" }, { value: "consumable", label: "Consumable" }, { value: "other", label: "Other" }]} value={form.category} onChange={v => setForm(f => ({ ...f, category: v }))} placeholder="— select —" />
         </label>
         <label><span style={{ fontSize: 13 }}>Unit</span><input style={inputStyle} value={form.unit} onChange={set("unit")} /></label>
         <label><span style={{ fontSize: 13 }}>Quantity</span><input style={inputStyle} type="number" value={form.quantity} onChange={set("quantity")} /></label>
@@ -348,6 +341,7 @@ export default function InventoryPage() {
               <thead><tr style={{ background: "#f8f9fa", borderBottom: "1px solid #eee" }}>
                 {col("Name", "name", paperActions, paperList)} {col("Brand", "brand", paperActions, paperList)}
                 {col("GSM", "gsm", paperActions, paperList)} <th style={th}>Size</th>
+                {paperInvTab === "external" && <th style={th}>Provider</th>}
                 {col("Stock", "quantity", paperActions, paperList)} <th style={th} />
               </tr></thead>
               <tbody>
@@ -357,17 +351,18 @@ export default function InventoryPage() {
                     <td style={td}>{p.brand || "—"}</td>
                     <td style={td}>{p.gsm || "—"}</td>
                     <td style={td}>{p.size || "—"}</td>
+                    {paperInvTab === "external" && <td style={td}>{p.paper_source || "—"}</td>}
                     <td style={td}><StockBadge isLow={p.is_low} qty={p.quantity} unit={p.unit} /></td>
                     <td style={td} onClick={(e) => e.stopPropagation()}>
                       <div style={{ display: "flex", gap: 6 }}>
                         {canEdit && <IconButton icon="✏️" tooltip="Edit" onClick={() => setEditingPaper(p)} />}
-                        {canEdit && <button onClick={() => setTxnTarget({ id: p.id, isPaper: true, name: p.name })} style={{ padding: "4px 10px", border: "1px solid #ddd", borderRadius: 6, cursor: "pointer", fontSize: 12, background: "#fff" }}>+ Stock</button>}
+                        {canEdit && <button onClick={() => setTxnTarget({ id: p.id, isPaper: true, name: p.paper_source ? `${p.name} (${p.paper_source})` : p.name })} style={{ padding: "4px 10px", border: "1px solid #ddd", borderRadius: 6, cursor: "pointer", fontSize: 12, background: "#fff" }}>+ Stock</button>}
                       </div>
                     </td>
                   </tr>
                 ))}
-                {!paper && <TableSkeleton cols={6} />}
-                {paper && !paper.data?.length && <tr><td colSpan={6} style={{ ...td, textAlign: "center", color: "#888", padding: 24 }}>No paper stock</td></tr>}
+                {!paper && <TableSkeleton cols={paperInvTab === "external" ? 7 : 6} />}
+                {paper && !paper.data?.length && <tr><td colSpan={paperInvTab === "external" ? 7 : 6} style={{ ...td, textAlign: "center", color: "#888", padding: 24 }}>No paper stock</td></tr>}
               </tbody>
             </table>
           </div>

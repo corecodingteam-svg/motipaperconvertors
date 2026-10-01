@@ -168,7 +168,7 @@ router.get("/:id", requirePermission("jobs.view"), async (req, res) => {
   const rawPapers = await db("job_papers")
     .where({ job_id: job.id })
     .leftJoin("paper_stock", "job_papers.paper_stock_id", "paper_stock.id")
-    .select("job_papers.*", "paper_stock.name as paper_name", "paper_stock.gsm", "paper_stock.size", "paper_stock.unit", "paper_stock.cost_per_unit", "paper_stock.inventory_type");
+    .select("job_papers.*", "paper_stock.name as paper_name", "paper_stock.gsm", "paper_stock.size", "paper_stock.unit", "paper_stock.cost_per_unit", "paper_stock.inventory_type", "paper_stock.paper_source");
 
   const papers = rawPapers.map(p => ({
     ...p,
