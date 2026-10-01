@@ -58,7 +58,7 @@ class SettingsState extends Equatable {
 
 // ── BLoC ─────────────────────────────────────────────────
 class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
-  static const _keys = ['job-types', 'print-colors', 'plate-sources', 'binding-types', 'staff-types'];
+  static const _keys = ['job-types', 'print-colors', 'plate-sources', 'binding-types', 'paper-providers', 'staff-types'];
 
   SettingsBloc() : super(const SettingsState()) {
     on<SettingsLoadRequested>(_onLoad);
@@ -120,6 +120,7 @@ class _SettingsView extends StatelessWidget {
     (key: 'print-colors', label: 'Print Colors', icon: Icons.palette_outlined),
     (key: 'plate-sources',label: 'Plate Sources',icon: Icons.layers_outlined),
     (key: 'binding-types',label: 'Binding Types',icon: Icons.menu_book_outlined),
+    (key: 'paper-providers',label: 'Paper Providers',icon: Icons.local_shipping_outlined),
     (key: 'staff-types',  label: 'Staff Types',  icon: Icons.badge_outlined),
   ];
 

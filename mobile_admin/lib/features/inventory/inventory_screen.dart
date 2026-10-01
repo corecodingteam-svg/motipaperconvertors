@@ -291,7 +291,13 @@ class _InventoryViewState extends State<_InventoryView> with SingleTickerProvide
     );
   }
 
-  void _showPaperForm(BuildContext context, InventoryState state, {PaperStock? existing}) {
+  Future<void> _showPaperForm(BuildContext context, InventoryState state, {PaperStock? existing}) async {
+    var providers = <String>[];
+    try {
+      final res = await ApiClient.instance.get('/admin/settings/paper-providers');
+      providers = (res.data as List? ?? []).map((e) => e['name'] as String? ?? '').where((n) => n.isNotEmpty).toList();
+    } catch (_) {}
+    if (!context.mounted) return;
     final bloc = context.read<InventoryBloc>();
     final formKey = GlobalKey<FormState>();
     final nameCtrl = TextEditingController(text: existing?.name);
@@ -303,6 +309,7 @@ class _InventoryViewState extends State<_InventoryView> with SingleTickerProvide
     final threshCtrl = TextEditingController(text: existing?.lowStockThreshold?.toStringAsFixed(0));
     final costCtrl = TextEditingController(text: existing?.costPerUnit?.toStringAsFixed(2));
     final sourceCtrl = TextEditingController(text: existing?.paperSource);
+    String? provider = existing?.paperSource;
     final billNoCtrl = TextEditingController(text: existing?.billNo);
     String? billDate = existing?.billDate;
     String invType = existing?.inventoryType ?? state.paperInvType;
@@ -363,7 +370,18 @@ class _InventoryViewState extends State<_InventoryView> with SingleTickerProvide
                 onChanged: (v) => setModal(() => invType = v ?? 'in_house'),
               ),
               const SizedBox(height: 12),
-              TextFormField(controller: sourceCtrl, decoration: const InputDecoration(labelText: 'Paper Source', hintText: 'Supplier / vendor')),
+              if (invType == 'external')
+                DropdownButtonFormField<String>(
+                  value: provider != null && provider!.isNotEmpty ? provider : null,
+                  decoration: const InputDecoration(labelText: 'Provider'),
+                  items: [
+                    ...providers.map((n) => DropdownMenuItem(value: n, child: Text(n))),
+                    if (provider != null && provider!.isNotEmpty && !providers.contains(provider)) DropdownMenuItem(value: provider, child: Text(provider!)),
+                  ],
+                  onChanged: (v) => setModal(() => provider = v),
+                )
+              else
+                TextFormField(controller: sourceCtrl, decoration: const InputDecoration(labelText: 'Paper Source', hintText: 'Supplier / vendor')),
               const SizedBox(height: 12),
               Row(children: [
                 Expanded(child: TextFormField(controller: billNoCtrl, decoration: const InputDecoration(labelText: 'Bill No'))),
@@ -393,7 +411,7 @@ class _InventoryViewState extends State<_InventoryView> with SingleTickerProvide
                   try {
                     final data = {
                       'name': nameCtrl.text,
-                      'paperSource': sourceCtrl.text.trim(),
+                      'paperSource': invType == 'external' ? (provider ?? '') : sourceCtrl.text.trim(),
                       'billNo': billNoCtrl.text.trim(),
                       if (billDate != null) 'billDate': billDate,
                       if (brandCtrl.text.isNotEmpty) 'brand': brandCtrl.text,
@@ -666,7 +684,7 @@ void _showPaperDetails(BuildContext context, PaperStock p) {
         row('Unit', unit),
         row('Reorder Level', p.lowStockThreshold?.toStringAsFixed(0) ?? '—'),
         row('Cost / Unit', p.costPerUnit != null ? '₹${p.costPerUnit!.toStringAsFixed(2)}' : '—'),
-        row('Paper Source', p.paperSource?.isNotEmpty == true ? p.paperSource! : '—'),
+        row(p.inventoryType == 'external' ? 'Provider' : 'Paper Source', p.paperSource?.isNotEmpty == true ? p.paperSource! : '—'),
         row('Bill No', p.billNo?.isNotEmpty == true ? p.billNo! : '—'),
         row('Bill Date', p.billDate != null ? '${p.billDate!.substring(8, 10)}/${p.billDate!.substring(5, 7)}/${p.billDate!.substring(0, 4)}' : '—'),
       ]),

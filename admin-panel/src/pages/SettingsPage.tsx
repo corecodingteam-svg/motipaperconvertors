@@ -125,6 +125,89 @@ function SettingsList({ label, queryKey, endpoint }: { label: string; queryKey: 
   );
 }
 
+interface Provider { id: string; name: string; contact_person?: string | null; phone?: string | null; email?: string | null; address?: string | null; gstin?: string | null; notes?: string | null; }
+const EMPTY_PROVIDER = { name: "", contactPerson: "", phone: "", email: "", address: "", gstin: "", notes: "" };
+
+function PaperProvidersSettings() {
+  const qc = useQueryClient();
+  const [editingId, setEditingId] = useState<string | "new" | null>(null);
+  const [form, setForm] = useState(EMPTY_PROVIDER);
+  const { data: providers = [], isLoading } = useQuery<Provider[]>({
+    queryKey: ["settings-paper-providers"],
+    queryFn: () => api.get("/admin/settings/paper-providers").then(r => r.data),
+  });
+  const close = () => { setEditingId(null); setForm(EMPTY_PROVIDER); };
+  const save = useMutation({
+    mutationFn: () => editingId === "new"
+      ? api.post("/admin/settings/paper-providers", form)
+      : api.patch(`/admin/settings/paper-providers/${editingId}`, form),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["settings-paper-providers"] }); toast.success("Provider saved"); close(); },
+    onError: () => toast.error("Failed to save provider"),
+  });
+  const remove = useMutation({
+    mutationFn: (id: string) => api.delete(`/admin/settings/paper-providers/${id}`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["settings-paper-providers"] }); toast.success("Provider deleted"); },
+    onError: () => toast.error("Failed to delete provider"),
+  });
+  const edit = (p: Provider) => {
+    setEditingId(p.id);
+    setForm({ name: p.name, contactPerson: p.contact_person ?? "", phone: p.phone ?? "", email: p.email ?? "", address: p.address ?? "", gstin: p.gstin ?? "", notes: p.notes ?? "" });
+  };
+  const set = (k: keyof typeof EMPTY_PROVIDER) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm(f => ({ ...f, [k]: e.target.value }));
+  const lbl: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 4, fontSize: 13 };
+
+  return (
+    <div style={{ background: "#fff", borderRadius: 8, boxShadow: "0 1px 4px rgba(0,0,0,.06)", overflow: "hidden" }}>
+      <div style={{ padding: "16px 20px", borderBottom: "1px solid #eee", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ fontSize: 13, color: "#666" }}>Providers selectable when adding external paper stock</span>
+        <button onClick={() => { setForm(EMPTY_PROVIDER); setEditingId("new"); }} style={{ padding: "8px 18px", background: "#3b5bdb", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: 14 }}>+ Add Provider</button>
+      </div>
+      {editingId && (
+        <div style={{ padding: 20, borderBottom: "1px solid #eee", background: "#fafbff" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+            <label style={lbl}>Name *<input style={inputStyle} value={form.name} onChange={set("name")} /></label>
+            <label style={lbl}>Contact Person<input style={inputStyle} value={form.contactPerson} onChange={set("contactPerson")} /></label>
+            <label style={lbl}>Phone<input style={inputStyle} value={form.phone} onChange={set("phone")} /></label>
+            <label style={lbl}>Email<input style={inputStyle} value={form.email} onChange={set("email")} /></label>
+            <label style={lbl}>GSTIN<input style={inputStyle} value={form.gstin} onChange={set("gstin")} /></label>
+            <label style={lbl}>Address<input style={inputStyle} value={form.address} onChange={set("address")} /></label>
+          </div>
+          <label style={lbl}>Notes<textarea style={{ ...inputStyle, minHeight: 56 }} value={form.notes} onChange={set("notes")} /></label>
+          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+            <button onClick={() => save.mutate()} disabled={!form.name.trim() || save.isPending} style={{ padding: "8px 20px", background: "#3b5bdb", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}>{save.isPending ? "Saving…" : "Save"}</button>
+            <button onClick={close} style={{ padding: "8px 14px", border: "1px solid #ddd", borderRadius: 6, cursor: "pointer", background: "#fff" }}>Cancel</button>
+          </div>
+        </div>
+      )}
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <thead><tr style={{ background: "#f8f9fa", borderBottom: "1px solid #eee" }}>
+          <th style={th}>Name</th><th style={th}>Contact</th><th style={th}>Phone</th><th style={th}>Email</th><th style={th}>GSTIN</th><th style={th}>Address</th><th style={{ ...th, width: 110 }} />
+        </tr></thead>
+        <tbody>
+          {isLoading && <tr><td colSpan={7} style={{ ...td, textAlign: "center", color: "#888" }}>Loading...</td></tr>}
+          {providers.map(p => (
+            <tr key={p.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
+              <td style={{ ...td, fontWeight: 500 }}>{p.name}</td>
+              <td style={td}>{p.contact_person || "—"}</td>
+              <td style={td}>{p.phone || "—"}</td>
+              <td style={td}>{p.email || "—"}</td>
+              <td style={td}>{p.gstin || "—"}</td>
+              <td style={td}>{p.address || "—"}</td>
+              <td style={td}>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={() => edit(p)} style={{ padding: "3px 10px", border: "1px solid #ddd", borderRadius: 6, cursor: "pointer", fontSize: 13, background: "#fff" }}>Edit</button>
+                  <button onClick={() => { if (confirm(`Delete ${p.name}?`)) remove.mutate(p.id); }} style={{ padding: "3px 10px", border: "1px solid #fdd", borderRadius: 6, cursor: "pointer", fontSize: 13, background: "#fff", color: "#c92a2a" }}>&times;</button>
+                </div>
+              </td>
+            </tr>
+          ))}
+          {!isLoading && providers.length === 0 && <tr><td colSpan={7} style={{ ...td, textAlign: "center", color: "#888", padding: 24 }}>No providers added yet</td></tr>}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 interface PrintTemplate { header: string | null; footer: string | null; signature: string | null; printFontSize?: number; }
 
 function ImageUploadCard({ label, hint, value, onChange }: {
@@ -330,7 +413,7 @@ function PrintTemplateSettings() {
 
 export default function SettingsPage() {
   const role = useAuthStore(s => s.role);
-  const [tab, setTab] = useState<"job_types" | "print_colors" | "plate_sources" | "binding_types" | "staff_types" | "print_template">("job_types");
+  const [tab, setTab] = useState<"job_types" | "print_colors" | "plate_sources" | "binding_types" | "paper_providers" | "staff_types" | "print_template">("job_types");
 
   if (role === "staff" || role === "operator") return null;
 
@@ -354,6 +437,7 @@ export default function SettingsPage() {
           <button style={tabStyle(tab === "print_colors")} onClick={() => setTab("print_colors")}>Print Colors</button>
           <button style={tabStyle(tab === "plate_sources")} onClick={() => setTab("plate_sources")}>Plate Sources</button>
           <button style={tabStyle(tab === "binding_types")} onClick={() => setTab("binding_types")}>Binding Types</button>
+          <button style={tabStyle(tab === "paper_providers")} onClick={() => setTab("paper_providers")}>Paper Providers</button>
           <button style={tabStyle(tab === "staff_types")} onClick={() => setTab("staff_types")}>Staff Types</button>
           <button style={tabStyle(tab === "print_template")} onClick={() => setTab("print_template")}>Print Template</button>
         </div>
@@ -386,6 +470,7 @@ export default function SettingsPage() {
               endpoint="/admin/settings/binding-types"
             />
           )}
+          {tab === "paper_providers" && <PaperProvidersSettings />}
           {tab === "staff_types" && (
             <SettingsList
               label="Staff Type"

@@ -113,6 +113,62 @@ router.delete("/binding-types/:id", requirePermission("settings.edit"), async (r
   res.json({ ok: true });
 });
 
+// ── Paper Providers (external paper inventory suppliers) ──────────────────────
+
+const ProviderSchema = z.object({
+  name: z.string().trim().min(1),
+  contactPerson: z.string().optional(), phone: z.string().optional(), email: z.string().optional(),
+  address: z.string().optional(), gstin: z.string().optional(), notes: z.string().optional(),
+});
+const PROVIDER_COLS = ["id", "name", "contact_person", "phone", "email", "address", "gstin", "notes"];
+
+function providerFields(d: Partial<z.infer<typeof ProviderSchema>>) {
+  const f: Record<string, unknown> = {};
+  if (d.name !== undefined) f.name = d.name;
+  if (d.contactPerson !== undefined) f.contact_person = d.contactPerson || null;
+  if (d.phone !== undefined) f.phone = d.phone || null;
+  if (d.email !== undefined) f.email = d.email || null;
+  if (d.address !== undefined) f.address = d.address || null;
+  if (d.gstin !== undefined) f.gstin = d.gstin || null;
+  if (d.notes !== undefined) f.notes = d.notes || null;
+  return f;
+}
+
+router.get("/paper-providers", requirePermission("settings.view"), async (req, res) => {
+  const rows = await db("paper_providers")
+    .where({ tenant_id: req.user.tenantId! })
+    .orderBy("name", "asc")
+    .select(PROVIDER_COLS);
+  res.json(rows);
+});
+
+router.post("/paper-providers", requirePermission("settings.edit"), async (req, res) => {
+  const parsed = ProviderSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.flatten() }); return; }
+  const [row] = await db("paper_providers")
+    .insert({ tenant_id: req.user.tenantId!, ...providerFields(parsed.data) })
+    .returning(PROVIDER_COLS);
+  res.status(201).json(row);
+});
+
+router.patch("/paper-providers/:id", requirePermission("settings.edit"), async (req, res) => {
+  const parsed = ProviderSchema.partial().safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.flatten() }); return; }
+  const [row] = await db("paper_providers")
+    .where({ id: req.params.id, tenant_id: req.user.tenantId! })
+    .update({ ...providerFields(parsed.data), updated_at: new Date() })
+    .returning(PROVIDER_COLS);
+  if (!row) { res.status(404).json({ error: "Provider not found" }); return; }
+  res.json(row);
+});
+
+router.delete("/paper-providers/:id", requirePermission("settings.edit"), async (req, res) => {
+  await db("paper_providers")
+    .where({ id: req.params.id, tenant_id: req.user.tenantId! })
+    .delete();
+  res.json({ ok: true });
+});
+
 // ── Staff Types ───────────────────────────────────────────────────────────────
 
 router.get("/staff-types", requirePermission("settings.view"), async (req, res) => {

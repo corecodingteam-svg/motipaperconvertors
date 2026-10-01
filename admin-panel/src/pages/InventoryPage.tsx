@@ -40,7 +40,7 @@ function PaperDetailModal({ paper, onClose }: { paper: PaperItem; onClose: () =>
     ["Unit", paper.unit || "—"],
     ["Reorder Level", paper.low_stock_threshold ?? "—"],
     ["Cost/Unit", paper.cost_per_unit != null ? `₹${paper.cost_per_unit}` : "—"],
-    ["Paper Source", paper.paper_source || "—"],
+    [paper.inventory_type === "external" ? "Provider" : "Paper Source", paper.paper_source || "—"],
     ["Bill No", paper.bill_no || "—"],
     ["Bill Date", fmtDate(paper.bill_date)],
   ];
@@ -133,6 +133,10 @@ function PaperForm({ initial, defaultInventoryType, onSave, onCancel, isPending 
     bill_date: initial?.bill_date?.slice(0, 10) ?? "",
   });
   const [nameError, setNameError] = useState("");
+  const { data: providers = [] } = useQuery<{ id: string; name: string }[]>({
+    queryKey: ["settings-paper-providers"],
+    queryFn: () => api.get("/admin/settings/paper-providers").then(r => r.data),
+  });
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm(f => ({ ...f, [k]: e.target.value }));
     if (k === "name") setNameError("");
@@ -163,7 +167,17 @@ function PaperForm({ initial, defaultInventoryType, onSave, onCancel, isPending 
             <option value="external">External</option>
           </select>
         </label>
-        <label><span style={{ fontSize: 13 }}>Paper Source</span><input style={inputStyle} placeholder="Supplier / vendor" value={form.paper_source} onChange={set("paper_source")} /></label>
+        {form.inventory_type === "external" ? (
+          <label><span style={{ fontSize: 13 }}>Provider</span>
+            <select style={inputStyle} value={form.paper_source} onChange={set("paper_source")}>
+              <option value="">— select provider —</option>
+              {providers.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+              {form.paper_source && !providers.some(p => p.name === form.paper_source) && <option value={form.paper_source}>{form.paper_source}</option>}
+            </select>
+          </label>
+        ) : (
+          <label><span style={{ fontSize: 13 }}>Paper Source</span><input style={inputStyle} placeholder="Supplier / vendor" value={form.paper_source} onChange={set("paper_source")} /></label>
+        )}
         <label><span style={{ fontSize: 13 }}>Bill No</span><input style={inputStyle} value={form.bill_no} onChange={set("bill_no")} /></label>
         <label><span style={{ fontSize: 13 }}>Bill Date</span><input style={inputStyle} type="date" value={form.bill_date} onChange={set("bill_date")} /></label>
       </div>
