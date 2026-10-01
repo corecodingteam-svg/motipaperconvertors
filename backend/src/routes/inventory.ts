@@ -25,7 +25,17 @@ const PaperStockSchema = z.object({
   unit: z.string().default("sheets"), quantity: z.number().min(0).default(0),
   lowStockThreshold: z.number().min(0).default(100), costPerUnit: z.number().min(0).optional(),
   inventoryType: z.enum(["in_house", "external"]).optional().default("in_house"),
+  paperSource: z.string().optional(), billNo: z.string().optional(),
+  billDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
+
+// pg returns DATE columns as local-midnight Date objects; serialise as plain YYYY-MM-DD
+function withBillDate<T extends Record<string, unknown>>(row: T): T {
+  const d = row.bill_date;
+  if (!(d instanceof Date)) return row;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return { ...row, bill_date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` };
+}
 
 router.get("/paper", requirePermission("inventory.view"), async (req, res) => {
   // Higher cap: job-form dropdowns and export fetch the full paper list in one call
@@ -49,7 +59,7 @@ router.get("/paper", requirePermission("inventory.view"), async (req, res) => {
 
   const result = await paginate(base, countQ, params, PAPER_SORT_COLS);
   result.data = result.data.map((i: Record<string, unknown>) => ({
-    ...i, is_low: Number(i.quantity) <= Number(i.low_stock_threshold),
+    ...withBillDate(i), is_low: Number(i.quantity) <= Number(i.low_stock_threshold),
   }));
   res.json(result);
 });
@@ -80,8 +90,9 @@ router.post("/paper", requirePermission("inventory.edit"), async (req, res) => {
     height_mm: d.heightMm ?? null, unit: d.unit, quantity: d.quantity,
     low_stock_threshold: d.lowStockThreshold, cost_per_unit: d.costPerUnit ?? null,
     inventory_type: d.inventoryType ?? "in_house",
+    paper_source: d.paperSource || null, bill_no: d.billNo || null, bill_date: d.billDate ?? null,
   }).returning("*");
-  res.status(201).json(item);
+  res.status(201).json(withBillDate(item));
 });
 
 router.patch("/paper/:id", requirePermission("inventory.edit"), async (req, res) => {
@@ -99,11 +110,14 @@ router.patch("/paper/:id", requirePermission("inventory.edit"), async (req, res)
   if (d.lowStockThreshold !== undefined) updates.low_stock_threshold = d.lowStockThreshold;
   if (d.costPerUnit !== undefined) updates.cost_per_unit = d.costPerUnit ?? null;
   if (d.inventoryType !== undefined) updates.inventory_type = d.inventoryType;
+  if (d.paperSource !== undefined) updates.paper_source = d.paperSource || null;
+  if (d.billNo !== undefined) updates.bill_no = d.billNo || null;
+  if (d.billDate !== undefined) updates.bill_date = d.billDate || null;
   const [updated] = await db("paper_stock")
     .where({ id: req.params.id, tenant_id: req.user.tenantId! })
     .update(updates).returning("*");
   if (!updated) { res.status(404).json({ error: "Item not found" }); return; }
-  res.json(updated);
+  res.json(withBillDate(updated));
 });
 
 // ══════════════════════════════════════════════════════════

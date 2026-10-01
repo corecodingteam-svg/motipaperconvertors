@@ -19,8 +19,11 @@ class PaperStock extends Equatable {
   final double? lowStockThreshold;
   final double? costPerUnit;
   final String inventoryType;
+  final String? paperSource;
+  final String? billNo;
+  final String? billDate; // YYYY-MM-DD
 
-  const PaperStock({required this.id, required this.name, this.brand, this.gsm, this.size, this.unit, required this.quantity, this.lowStockThreshold, this.costPerUnit, this.inventoryType = 'in_house'});
+  const PaperStock({required this.id, required this.name, this.brand, this.gsm, this.size, this.unit, required this.quantity, this.lowStockThreshold, this.costPerUnit, this.inventoryType = 'in_house', this.paperSource, this.billNo, this.billDate});
 
   bool get isLowStock => lowStockThreshold != null && quantity <= lowStockThreshold!;
 
@@ -35,6 +38,9 @@ class PaperStock extends Equatable {
     lowStockThreshold: double.tryParse(j['low_stock_threshold']?.toString() ?? ''),
     costPerUnit: double.tryParse(j['cost_per_unit']?.toString() ?? ''),
     inventoryType: j['inventory_type'] as String? ?? 'in_house',
+    paperSource: j['paper_source'] as String?,
+    billNo: j['bill_no'] as String?,
+    billDate: (j['bill_date'] as String?)?.substring(0, 10),
   );
 
   @override List<Object?> get props => [id];
@@ -296,6 +302,9 @@ class _InventoryViewState extends State<_InventoryView> with SingleTickerProvide
     final qtyCtrl = TextEditingController(text: existing?.quantity.toStringAsFixed(0));
     final threshCtrl = TextEditingController(text: existing?.lowStockThreshold?.toStringAsFixed(0));
     final costCtrl = TextEditingController(text: existing?.costPerUnit?.toStringAsFixed(2));
+    final sourceCtrl = TextEditingController(text: existing?.paperSource);
+    final billNoCtrl = TextEditingController(text: existing?.billNo);
+    String? billDate = existing?.billDate;
     String invType = existing?.inventoryType ?? state.paperInvType;
     bool saving = false;
 
@@ -353,6 +362,28 @@ class _InventoryViewState extends State<_InventoryView> with SingleTickerProvide
                 ],
                 onChanged: (v) => setModal(() => invType = v ?? 'in_house'),
               ),
+              const SizedBox(height: 12),
+              TextFormField(controller: sourceCtrl, decoration: const InputDecoration(labelText: 'Paper Source', hintText: 'Supplier / vendor')),
+              const SizedBox(height: 12),
+              Row(children: [
+                Expanded(child: TextFormField(controller: billNoCtrl, decoration: const InputDecoration(labelText: 'Bill No'))),
+                const SizedBox(width: 12),
+                Expanded(child: InkWell(
+                  onTap: () async {
+                    final now = DateTime.now();
+                    final picked = await showDatePicker(
+                      context: ctx,
+                      initialDate: billDate != null ? DateTime.tryParse(billDate!) ?? now : now,
+                      firstDate: DateTime(2000), lastDate: DateTime(now.year + 1, 12, 31),
+                    );
+                    if (picked != null) setModal(() => billDate = picked.toIso8601String().substring(0, 10));
+                  },
+                  child: InputDecorator(
+                    decoration: const InputDecoration(labelText: 'Bill Date', suffixIcon: Icon(Icons.calendar_today, size: 18)),
+                    child: Text(billDate ?? 'Select date'),
+                  ),
+                )),
+              ]),
               const SizedBox(height: 20),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary),
@@ -362,6 +393,9 @@ class _InventoryViewState extends State<_InventoryView> with SingleTickerProvide
                   try {
                     final data = {
                       'name': nameCtrl.text,
+                      'paperSource': sourceCtrl.text.trim(),
+                      'billNo': billNoCtrl.text.trim(),
+                      if (billDate != null) 'billDate': billDate,
                       if (brandCtrl.text.isNotEmpty) 'brand': brandCtrl.text,
                       if (gsmCtrl.text.isNotEmpty) 'gsm': int.tryParse(gsmCtrl.text),
                       if (sizeCtrl.text.isNotEmpty) 'size': sizeCtrl.text,
@@ -577,7 +611,8 @@ class _PaperCard extends StatelessWidget {
     final low = paper.isLowStock;
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(padding: const EdgeInsets.all(14), child: Row(children: [
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(onTap: () => _showPaperDetails(context, paper), child: Padding(padding: const EdgeInsets.all(14), child: Row(children: [
         Container(width: 4, height: 56, decoration: BoxDecoration(color: low ? AppColors.error : AppColors.primary, borderRadius: BorderRadius.circular(2))),
         const SizedBox(width: 12),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -601,9 +636,42 @@ class _PaperCard extends StatelessWidget {
             const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_outlined, size: 18), SizedBox(width: 8), Text('Edit')])),
           ],
         ),
-      ])),
+      ]))),
     );
   }
+}
+
+void _showPaperDetails(BuildContext context, PaperStock p) {
+  Widget row(String label, String value) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      SizedBox(width: 120, child: Text(label, style: const TextStyle(fontSize: 13, color: AppColors.textMuted))),
+      Expanded(child: Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500))),
+    ]),
+  );
+  final unit = p.unit ?? 'sheets';
+  showModalBottomSheet(
+    context: context, isScrollControlled: true,
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+    builder: (_) => SafeArea(child: Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text(p.name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 12),
+        row('Brand', p.brand ?? '—'),
+        row('GSM', p.gsm?.toString() ?? '—'),
+        row('Size', p.size ?? '—'),
+        row('Inventory Type', p.inventoryType == 'external' ? 'External' : 'In House'),
+        row('Stock', '${p.quantity.toStringAsFixed(0)} $unit${p.isLowStock ? '  (LOW)' : ''}'),
+        row('Unit', unit),
+        row('Reorder Level', p.lowStockThreshold?.toStringAsFixed(0) ?? '—'),
+        row('Cost / Unit', p.costPerUnit != null ? '₹${p.costPerUnit!.toStringAsFixed(2)}' : '—'),
+        row('Paper Source', p.paperSource?.isNotEmpty == true ? p.paperSource! : '—'),
+        row('Bill No', p.billNo?.isNotEmpty == true ? p.billNo! : '—'),
+        row('Bill Date', p.billDate != null ? '${p.billDate!.substring(8, 10)}/${p.billDate!.substring(5, 7)}/${p.billDate!.substring(0, 4)}' : '—'),
+      ]),
+    )),
+  );
 }
 
 // ── Items tab ─────────────────────────────────────────────

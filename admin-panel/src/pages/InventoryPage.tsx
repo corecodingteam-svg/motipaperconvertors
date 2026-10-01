@@ -22,12 +22,46 @@ const th: React.CSSProperties = { padding: "11px 14px", textAlign: "left", fontS
 const td: React.CSSProperties = { padding: "11px 14px", fontSize: 13 };
 
 type PaperInvTab = "in_house" | "external";
-type PaperItem = { id: string; name: string; brand: string; gsm: number; size: string; unit: string; quantity: number; low_stock_threshold: number; cost_per_unit?: number; is_low: boolean; inventory_type: PaperInvTab; };
+type PaperItem = { id: string; name: string; brand: string; gsm: number; size: string; unit: string; quantity: number; low_stock_threshold: number; cost_per_unit?: number; is_low: boolean; inventory_type: PaperInvTab; paper_source?: string | null; bill_no?: string | null; bill_date?: string | null; };
 type InvItem   = { id: string; name: string; category: string; unit: string; quantity: number; low_stock_threshold: number; is_low: boolean; };
 type TxnItem   = { id: string; transacted_at: string; type: string; quantity: number; performed_by_name: string; notes: string; paper_name: string; item_name: string; };
 
 function StockBadge({ isLow, qty, unit }: { isLow: boolean; qty: number; unit: string }) {
   return <span style={{ padding: "2px 9px", borderRadius: 10, fontSize: 12, fontWeight: 600, background: isLow ? "#ffe3e3" : "#d3f9d8", color: isLow ? "#c92a2a" : "#2b8a3e" }}>{qty} {unit}{isLow ? " ⚠" : ""}</span>;
+}
+
+function PaperDetailModal({ paper, onClose }: { paper: PaperItem; onClose: () => void }) {
+  const rows: [string, React.ReactNode][] = [
+    ["Brand", paper.brand || "—"],
+    ["GSM", paper.gsm || "—"],
+    ["Size", paper.size || "—"],
+    ["Inventory Type", paper.inventory_type === "external" ? "External" : "In House"],
+    ["Stock", <StockBadge isLow={paper.is_low} qty={paper.quantity} unit={paper.unit} />],
+    ["Unit", paper.unit || "—"],
+    ["Reorder Level", paper.low_stock_threshold ?? "—"],
+    ["Cost/Unit", paper.cost_per_unit != null ? `₹${paper.cost_per_unit}` : "—"],
+    ["Paper Source", paper.paper_source || "—"],
+    ["Bill No", paper.bill_no || "—"],
+    ["Bill Date", fmtDate(paper.bill_date)],
+  ];
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 10, padding: 24, width: 420, maxWidth: "90vw", boxShadow: "0 8px 30px rgba(0,0,0,.2)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <h3 style={{ margin: 0 }}>{paper.name}</h3>
+          <button onClick={onClose} aria-label="Close" style={{ border: "none", background: "none", fontSize: 20, cursor: "pointer" }}>×</button>
+        </div>
+        {rows.map(([label, value]) => (
+          <div key={label} style={{ display: "flex", padding: "7px 0", borderBottom: "1px solid #f0f0f0", fontSize: 14 }}>
+            <span style={{ width: 130, color: "#666" }}>{label}</span><span style={{ fontWeight: 500 }}>{value}</span>
+          </div>
+        ))}
+        <div style={{ textAlign: "right", marginTop: 16 }}>
+          <button onClick={onClose} style={{ padding: "8px 18px", border: "1px solid #ddd", borderRadius: 6, cursor: "pointer", background: "#fff" }}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function TxnForm({ target, onClose }: { target: { id: string; isPaper: boolean; name: string }; onClose: () => void }) {
@@ -94,6 +128,9 @@ function PaperForm({ initial, defaultInventoryType, onSave, onCancel, isPending 
     low_stock_threshold: initial?.low_stock_threshold?.toString() ?? "",
     cost_per_unit: initial?.cost_per_unit?.toString() ?? "",
     inventory_type: initial?.inventory_type ?? defaultInventoryType ?? "in_house",
+    paper_source: initial?.paper_source ?? "",
+    bill_no: initial?.bill_no ?? "",
+    bill_date: initial?.bill_date?.slice(0, 10) ?? "",
   });
   const [nameError, setNameError] = useState("");
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -126,6 +163,9 @@ function PaperForm({ initial, defaultInventoryType, onSave, onCancel, isPending 
             <option value="external">External</option>
           </select>
         </label>
+        <label><span style={{ fontSize: 13 }}>Paper Source</span><input style={inputStyle} placeholder="Supplier / vendor" value={form.paper_source} onChange={set("paper_source")} /></label>
+        <label><span style={{ fontSize: 13 }}>Bill No</span><input style={inputStyle} value={form.bill_no} onChange={set("bill_no")} /></label>
+        <label><span style={{ fontSize: 13 }}>Bill Date</span><input style={inputStyle} type="date" value={form.bill_date} onChange={set("bill_date")} /></label>
       </div>
       <div style={{ display: "flex", gap: 8 }}>
         <button onClick={handleSave} disabled={isPending} style={{ padding: "8px 20px", background: "#3b5bdb", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}>{isPending ? "Saving…" : "Save"}</button>
@@ -187,6 +227,7 @@ export default function InventoryPage() {
   const [txnTarget, setTxnTarget] = useState<{ id: string; isPaper: boolean; name: string } | null>(null);
   const [showPaperForm, setShowPaperForm] = useState(false);
   const [editingPaper, setEditingPaper] = useState<PaperItem | null>(null);
+  const [viewingPaper, setViewingPaper] = useState<PaperItem | null>(null);
   const [showItemForm, setShowItemForm] = useState(false);
   const [editingItem, setEditingItem] = useState<InvItem | null>(null);
   const [exportingPaper, setExportingPaper] = useState(false);
@@ -242,12 +283,12 @@ export default function InventoryPage() {
   const { data: txns }  = useQuery<PagedResult<TxnItem>>({ queryKey: ["inv-txns", txnActions.toParams()], queryFn: () => api.get("/admin/inventory/transactions", { params: txnActions.toParams() }).then(r => r.data), placeholderData: keepPreviousData });
 
   const createPaper = useMutation({
-    mutationFn: (d: Record<string, string>) => api.post("/admin/inventory/paper", { name: d.name, brand: d.brand || undefined, gsm: d.gsm ? Number(d.gsm) : undefined, size: d.size || undefined, unit: d.unit || "sheets", quantity: d.quantity ? Number(d.quantity) : 0, lowStockThreshold: d.low_stock_threshold ? Number(d.low_stock_threshold) : 100, costPerUnit: d.cost_per_unit ? Number(d.cost_per_unit) : undefined, inventoryType: (d.inventory_type as "in_house" | "external") || "in_house" }),
+    mutationFn: (d: Record<string, string>) => api.post("/admin/inventory/paper", { name: d.name, brand: d.brand || undefined, gsm: d.gsm ? Number(d.gsm) : undefined, size: d.size || undefined, unit: d.unit || "sheets", quantity: d.quantity ? Number(d.quantity) : 0, lowStockThreshold: d.low_stock_threshold ? Number(d.low_stock_threshold) : 100, costPerUnit: d.cost_per_unit ? Number(d.cost_per_unit) : undefined, inventoryType: (d.inventory_type as "in_house" | "external") || "in_house", paperSource: d.paper_source || undefined, billNo: d.bill_no || undefined, billDate: d.bill_date || undefined }),
     onSuccess: () => { qcInv.invalidateQueries({ queryKey: ["paper"] }); setShowPaperForm(false); toast.success("Paper stock added"); },
     onError: () => toast.error("Failed to add paper stock"),
   });
   const updatePaper = useMutation({
-    mutationFn: ({ id, ...d }: Record<string, string>) => api.patch(`/admin/inventory/paper/${id}`, { name: d.name, brand: d.brand || undefined, gsm: d.gsm ? Number(d.gsm) : undefined, size: d.size || undefined, unit: d.unit || undefined, quantity: d.quantity ? Number(d.quantity) : undefined, lowStockThreshold: d.low_stock_threshold ? Number(d.low_stock_threshold) : undefined, costPerUnit: d.cost_per_unit ? Number(d.cost_per_unit) : undefined, inventoryType: (d.inventory_type as "in_house" | "external") || undefined }),
+    mutationFn: ({ id, ...d }: Record<string, string>) => api.patch(`/admin/inventory/paper/${id}`, { name: d.name, brand: d.brand || undefined, gsm: d.gsm ? Number(d.gsm) : undefined, size: d.size || undefined, unit: d.unit || undefined, quantity: d.quantity ? Number(d.quantity) : undefined, lowStockThreshold: d.low_stock_threshold ? Number(d.low_stock_threshold) : undefined, costPerUnit: d.cost_per_unit ? Number(d.cost_per_unit) : undefined, inventoryType: (d.inventory_type as "in_house" | "external") || undefined, paperSource: d.paper_source ?? undefined, billNo: d.bill_no ?? undefined, billDate: d.bill_date ?? undefined }),
     onSuccess: () => { qcInv.invalidateQueries({ queryKey: ["paper"] }); setEditingPaper(null); toast.success("Paper stock updated"); },
     onError: () => toast.error("Failed to update paper stock"),
   });
@@ -274,6 +315,7 @@ export default function InventoryPage() {
     <div>
       <h1 style={{ marginBottom: 20 }}>Inventory</h1>
       <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>{tabBtn("paper", "Paper Stock")}{tabBtn("items", "Ink / Plates")}{tabBtn("transactions", "Transactions")}</div>
+      {viewingPaper && <PaperDetailModal paper={viewingPaper} onClose={() => setViewingPaper(null)} />}
       {txnTarget && <TxnForm target={txnTarget} onClose={() => setTxnTarget(null)} />}
 
       {tab === "paper" && (
@@ -296,13 +338,13 @@ export default function InventoryPage() {
               </tr></thead>
               <tbody>
                 {paper?.data?.map((p) => (
-                  <tr key={p.id} style={{ borderBottom: "1px solid #f0f0f0", background: p.is_low ? "#fff9f9" : "#fff" }}>
+                  <tr key={p.id} onClick={() => setViewingPaper(p)} style={{ borderBottom: "1px solid #f0f0f0", background: p.is_low ? "#fff9f9" : "#fff", cursor: "pointer" }}>
                     <td style={{ ...td, fontWeight: 500 }}>{p.name}</td>
                     <td style={td}>{p.brand || "—"}</td>
                     <td style={td}>{p.gsm || "—"}</td>
                     <td style={td}>{p.size || "—"}</td>
                     <td style={td}><StockBadge isLow={p.is_low} qty={p.quantity} unit={p.unit} /></td>
-                    <td style={td}>
+                    <td style={td} onClick={(e) => e.stopPropagation()}>
                       <div style={{ display: "flex", gap: 6 }}>
                         {canEdit && <IconButton icon="✏️" tooltip="Edit" onClick={() => setEditingPaper(p)} />}
                         {canEdit && <button onClick={() => setTxnTarget({ id: p.id, isPaper: true, name: p.name })} style={{ padding: "4px 10px", border: "1px solid #ddd", borderRadius: 6, cursor: "pointer", fontSize: 12, background: "#fff" }}>+ Stock</button>}
