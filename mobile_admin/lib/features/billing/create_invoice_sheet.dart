@@ -1,3 +1,4 @@
+import '../../core/widgets/searchable_dropdown.dart';
 import 'package:flutter/material.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_theme.dart';
@@ -105,7 +106,7 @@ class _CreateInvoiceSheetState extends State<CreateInvoiceSheet> {
           : ListView(controller: ctrl, padding: const EdgeInsets.all(20), children: [
               if (_error != null) Container(margin: const EdgeInsets.only(bottom: 12), padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: AppColors.errorLight, borderRadius: BorderRadius.circular(8)), child: Text(_error!, style: const TextStyle(color: AppColors.error, fontSize: 13))),
               // Client
-              DropdownButtonFormField<String>(
+              SearchableDropdown<String>(
                 initialValue: _clientId,
                 hint: const Text('Select Client *', style: TextStyle(color: AppColors.textDisabled)),
                 decoration: const InputDecoration(labelText: 'Client'),
@@ -115,7 +116,7 @@ class _CreateInvoiceSheetState extends State<CreateInvoiceSheet> {
               ),
               const SizedBox(height: 12),
               // Job (optional)
-              DropdownButtonFormField<String>(
+              SearchableDropdown<String>(
                 initialValue: _jobId,
                 hint: const Text('Link to Job Card (optional)', style: TextStyle(color: AppColors.textDisabled)),
                 decoration: const InputDecoration(labelText: 'Job Card'),
@@ -125,7 +126,7 @@ class _CreateInvoiceSheetState extends State<CreateInvoiceSheet> {
               ),
               const SizedBox(height: 12),
               // Invoice type
-              DropdownButtonFormField<String>(
+              SearchableDropdown<String>(
                 initialValue: _invoiceType,
                 decoration: const InputDecoration(labelText: 'Invoice Type'),
                 items: const [

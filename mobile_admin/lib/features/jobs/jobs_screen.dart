@@ -23,7 +23,7 @@ class _JobsScreenState extends State<JobsScreen> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    _tabCtrl = TabController(length: 2, vsync: this);
+    _tabCtrl = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -42,6 +42,7 @@ class _JobsScreenState extends State<JobsScreen> with SingleTickerProviderStateM
             tabs: const [
               Tab(text: 'In House'),
               Tab(text: 'External'),
+              Tab(text: 'Tax Invoice'),
             ],
             labelColor: AppColors.primary,
             unselectedLabelColor: AppColors.textMuted,
@@ -55,6 +56,7 @@ class _JobsScreenState extends State<JobsScreen> with SingleTickerProviderStateM
         children: const [
           _JobsTabView(orderType: 'in_house'),
           _JobsTabView(orderType: 'external'),
+          _JobsTabView(orderType: null, taxInvoiceDone: true),
         ],
       ),
     );
@@ -63,19 +65,21 @@ class _JobsScreenState extends State<JobsScreen> with SingleTickerProviderStateM
 
 // ── Jobs view for a specific order type ───────────────────
 class _JobsTabView extends StatelessWidget {
-  final String orderType;
-  const _JobsTabView({required this.orderType});
+  final String? orderType;
+  final bool taxInvoiceDone;
+  const _JobsTabView({required this.orderType, this.taxInvoiceDone = false});
 
   @override
   Widget build(BuildContext context) => BlocProvider(
-    create: (_) => JobsBloc(fixedOrderType: orderType)..add(const JobsLoadRequested()),
-    child: _JobsView(orderType: orderType),
+    create: (_) => JobsBloc(fixedOrderType: orderType, taxInvoice: taxInvoiceDone ? 'done' : 'pending')..add(const JobsLoadRequested()),
+    child: _JobsView(orderType: orderType, taxInvoiceDone: taxInvoiceDone),
   );
 }
 
 class _JobsView extends StatefulWidget {
-  final String orderType;
-  const _JobsView({required this.orderType});
+  final String? orderType; // null on the Tax Invoice tab, which lists both order types
+  final bool taxInvoiceDone;
+  const _JobsView({required this.orderType, this.taxInvoiceDone = false});
   @override State<_JobsView> createState() => _JobsViewState();
 }
 
@@ -103,7 +107,7 @@ class _JobsViewState extends State<_JobsView> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      floatingActionButton: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.end, children: [
+      floatingActionButton: widget.taxInvoiceDone ? null : Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.end, children: [
         if (_fabOpen) ...[
           Row(mainAxisSize: MainAxisSize.min, children: [
             Container(
@@ -120,7 +124,7 @@ class _JobsViewState extends State<_JobsView> {
                 final bloc = context.read<JobsBloc>();
                 final created = await Navigator.push<bool>(context, MaterialPageRoute(
                   builder: (_) => BlocProvider.value(value: bloc,
-                    child: JobFormScreen(initialOrderType: widget.orderType))));
+                    child: JobFormScreen(initialOrderType: widget.orderType ?? 'in_house'))));
                 if (created == true && context.mounted) bloc.add(const JobsLoadRequested());
               },
               child: const Icon(Icons.work_rounded, color: Colors.white, size: 20),
@@ -186,7 +190,7 @@ class _JobsViewState extends State<_JobsView> {
                 SliverFillRemaining(child: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                   const Icon(Icons.work_outline, size: 56, color: AppColors.textMuted),
                   const SizedBox(height: 12),
-                  Text(state.hasActiveFilters ? 'No jobs match filters' : 'No ${widget.orderType == 'external' ? 'external' : 'in-house'} jobs yet', style: const TextStyle(color: AppColors.textMuted)),
+                  Text(state.hasActiveFilters ? 'No jobs match filters' : (widget.taxInvoiceDone ? 'No tax invoice cards yet' : 'No ${widget.orderType == 'external' ? 'external' : 'in-house'} jobs yet'), style: const TextStyle(color: AppColors.textMuted)),
                 ])))
               else
                 SliverPadding(

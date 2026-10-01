@@ -1,4 +1,5 @@
-﻿import 'dart:ui' show ImageFilter;
+﻿import '../../core/widgets/searchable_dropdown.dart';
+import 'dart:ui' show ImageFilter;
 import '../../core/widgets/shell_scaffold.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
@@ -338,7 +339,7 @@ class _StaffViewState extends State<_StaffView> {
               const SizedBox(height: 12),
               TextFormField(controller: passCtrl, obscureText: true, decoration: const InputDecoration(labelText: 'Password *'), validator: (v) => (v?.length ?? 0) < 6 ? 'Min 6 characters' : null),
               const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
+              SearchableDropdown<String>(
                 initialValue: selectedRole,
                 decoration: const InputDecoration(labelText: 'Role'),
                 items: const [

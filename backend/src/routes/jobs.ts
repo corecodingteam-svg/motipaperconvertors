@@ -422,10 +422,18 @@ router.patch("/:id", requirePermission("jobs.edit"), async (req, res) => {
     "delivery_quantity", "challan_number", "challan_date",
     "tax_invoice_no", "invoice_date",
     "print_operator_id", "binding_operator_id", "packing_operator_id", "qc_operator_id", "designer_id"];
+  // The mobile app sends camelCase keys, the web sends snake_case: accept both
+  const body: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(req.body as Record<string, unknown>)) {
+    body[k.replace(/[A-Z]/g, (c) => "_" + c.toLowerCase())] = v;
+  }
+  body.is_uv ??= body.is_u_v; // 'isUV' would otherwise become is_u_v
   const updates: Record<string, unknown> = {};
   for (const key of allowed) {
-    if (req.body[key] !== undefined) updates[key] = req.body[key];
+    if (body[key] !== undefined) updates[key] = body[key];
   }
+  if (updates.is_binding === false) updates.binding_type = null;
+  if (updates.is_lamination === false) updates.lamination_type = null;
   updates.updated_at = new Date();
 
   const [updated] = await db.transaction(async (trx) => {

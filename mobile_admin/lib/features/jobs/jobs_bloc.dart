@@ -113,8 +113,10 @@ class JobsBloc extends Bloc<JobsEvent, JobsState> {
   static const _limit = 20;
   // When set, this order_type is always sent and cannot be overridden by filters
   final String? fixedOrderType;
+  // 'pending' = tax invoice not filled yet (normal lists), 'done' = tax invoice filled
+  final String? taxInvoice;
 
-  JobsBloc({this.fixedOrderType}) : super(const JobsState()) {
+  JobsBloc({this.fixedOrderType, this.taxInvoice}) : super(const JobsState()) {
     on<JobsLoadRequested>(_onLoad);
     on<JobsSearchChanged>(_onSearch);
     on<JobsFilterChanged>(_onFilter);
@@ -134,6 +136,7 @@ class JobsBloc extends Bloc<JobsEvent, JobsState> {
     if (state.machineFilter != null) 'machineId': state.machineFilter,
     // fixedOrderType (tab-level) takes precedence over filter-level orderType
     'order_type': fixedOrderType ?? state.orderTypeFilter,
+    if (taxInvoice != null) 'taxInvoice': taxInvoice,
   };
 
   Future<void> _onLoad(JobsLoadRequested event, Emitter<JobsState> emit) async {

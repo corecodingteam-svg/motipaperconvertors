@@ -1,3 +1,4 @@
+import '../../core/widgets/searchable_dropdown.dart';
 import 'package:flutter/material.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_theme.dart';
@@ -74,14 +75,14 @@ class _RecordPaymentSheetState extends State<RecordPaymentSheet> {
           ),
         ),
         const SizedBox(height: 12),
-        DropdownButtonFormField<String>(
+        SearchableDropdown<String>(
           initialValue: _mode,
           decoration: const InputDecoration(labelText: 'Payment Mode'),
           items: _modes.map((m) => DropdownMenuItem(value: m, child: Text(m.toUpperCase()))).toList(),
           onChanged: (v) => setState(() => _mode = v ?? 'cash'),
         ),
         const SizedBox(height: 12),
-        DropdownButtonFormField<String>(
+        SearchableDropdown<String>(
           initialValue: _type,
           decoration: const InputDecoration(labelText: 'Payment Type'),
           items: _types.map((t) => DropdownMenuItem(value: t, child: Text(t.replaceAll('_', ' ').toUpperCase()))).toList(),

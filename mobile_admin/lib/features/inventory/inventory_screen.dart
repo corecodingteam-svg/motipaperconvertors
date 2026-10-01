@@ -1,3 +1,4 @@
+import '../../core/widgets/searchable_dropdown.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -360,7 +361,7 @@ class _InventoryViewState extends State<_InventoryView> with SingleTickerProvide
                 return null;
               }),
               const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
+              SearchableDropdown<String>(
                 value: invType,
                 decoration: const InputDecoration(labelText: 'Inventory Pool'),
                 items: const [
@@ -371,7 +372,7 @@ class _InventoryViewState extends State<_InventoryView> with SingleTickerProvide
               ),
               const SizedBox(height: 12),
               if (invType == 'external')
-                DropdownButtonFormField<String>(
+                SearchableDropdown<String>(
                   value: provider != null && provider!.isNotEmpty ? provider : null,
                   decoration: const InputDecoration(labelText: 'Provider'),
                   items: [
@@ -466,7 +467,7 @@ class _InventoryViewState extends State<_InventoryView> with SingleTickerProvide
               const SizedBox(height: 16),
               TextFormField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name *'), validator: (v) => v?.trim().isEmpty == true ? 'Name is required' : null),
               const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
+              SearchableDropdown<String>(
                 value: category,
                 decoration: const InputDecoration(labelText: 'Category'),
                 items: const [
@@ -540,7 +541,7 @@ class _InventoryViewState extends State<_InventoryView> with SingleTickerProvide
               const SizedBox(height: 4),
               Text(name, style: const TextStyle(fontSize: 13, color: AppColors.textMuted)),
               const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
+              SearchableDropdown<String>(
                 value: txType,
                 decoration: const InputDecoration(labelText: 'Transaction Type'),
                 items: const [

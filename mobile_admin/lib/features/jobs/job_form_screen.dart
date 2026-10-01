@@ -1,3 +1,4 @@
+import '../../core/widgets/searchable_dropdown.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/network/api_client.dart';
@@ -114,7 +115,7 @@ class JobFormData {
     if (approvedRate != null) 'approvedRate': approvedRate,
     if (dueDate != null) 'dueDate': dueDate,
     'proofRequired': proofRequired,
-    if (taxInvoiceNo != null && taxInvoiceNo!.isNotEmpty) 'taxInvoiceNo': taxInvoiceNo,
+    if (taxInvoiceNo != null) 'taxInvoiceNo': taxInvoiceNo, // '' clears it, which returns the card to the normal list
     if (invoiceDate != null) 'invoiceDate': invoiceDate,
     if (quotationRef != null && quotationRef!.isNotEmpty) 'quotationRef': quotationRef,
     if (indentNumber != null && indentNumber!.isNotEmpty) 'indentNumber': indentNumber,
@@ -258,6 +259,8 @@ class _JobFormScreenState extends State<JobFormScreen> {
   }
 
   bool _validateCurrentStep() {
+    // Editing an existing job: its saved values are trusted, so steps can be moved through freely
+    if (widget.existing != null) return true;
     if (_step == 0) {
       return _data.jobType.isNotEmpty &&
           _data.clientId != null &&
@@ -441,7 +444,7 @@ Widget _field(String label, Widget child) => Padding(
   ]),
 );
 
-Widget _dropdownField<T>(String label, T? value, List<DropdownMenuItem<T>> items, ValueChanged<T?> onChanged) => _field(label, DropdownButtonFormField<T>(
+Widget _dropdownField<T>(String label, T? value, List<DropdownMenuItem<T>> items, ValueChanged<T?> onChanged) => _field(label, SearchableDropdown<T>(
   value: value, items: items, onChanged: onChanged,
   decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
   isExpanded: true,
@@ -522,7 +525,7 @@ class _Step1BasicInfo extends StatelessWidget {
           ]),
         ),
       _FormSection(title: 'Job Information', children: [
-        _field('Job Title *', DropdownButtonFormField<String>(
+        _field('Job Title *', SearchableDropdown<String>(
           value: jobTypes.contains(data.jobType) ? data.jobType : null,
           hint: const Text('Select Job Title', style: TextStyle(color: AppColors.textDisabled)),
           decoration: _dec('Job Title *', required: true, hasError: jobTitleError),
@@ -530,7 +533,7 @@ class _Step1BasicInfo extends StatelessWidget {
           items: jobTypes.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
           onChanged: (v) { data.jobType = v ?? ''; onChange(); },
         )),
-        _field('Client *', DropdownButtonFormField<String>(
+        _field('Client *', SearchableDropdown<String>(
           value: clients.any((c) => c.id == data.clientId) ? data.clientId : null,
           hint: const Text('Select Client', style: TextStyle(color: AppColors.textDisabled)),
           decoration: _dec('Client *', required: true, hasError: clientError),
@@ -538,7 +541,7 @@ class _Step1BasicInfo extends StatelessWidget {
           items: clients.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name, overflow: TextOverflow.ellipsis))).toList(),
           onChanged: (v) { data.clientId = v; onChange(); },
         )),
-        _field('Machine', DropdownButtonFormField<String>(
+        _field('Machine', SearchableDropdown<String>(
           value: machines.any((m) => m.id == data.machineId) ? data.machineId : null,
           hint: const Text('Select Machine', style: TextStyle(color: AppColors.textDisabled)),
           decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
@@ -616,7 +619,7 @@ class _Step2PaperPrint extends StatelessWidget {
           final i = e.key;
           final p = e.value;
           return Card(margin: const EdgeInsets.only(bottom: 8), child: Padding(padding: const EdgeInsets.all(12), child: Row(children: [
-            Expanded(child: DropdownButtonFormField<String>(
+            Expanded(child: SearchableDropdown<String>(
               value: paperStock.any((s) => s.id == p.paperStockId) ? p.paperStockId : null,
               decoration: const InputDecoration(labelText: 'Paper', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
               isExpanded: true,
@@ -739,11 +742,11 @@ class _Step4Assignment extends StatelessWidget {
 
     return SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _FormSection(title: 'Assign Operators', children: [
-        _field('Print Operator', DropdownButtonFormField<String>(value: data.printOperatorId, items: items, onChanged: (v) { data.printOperatorId = v; onChange(); }, isExpanded: true, decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10)))),
-        _field('Designer', DropdownButtonFormField<String>(value: data.designerId, items: items, onChanged: (v) { data.designerId = v; onChange(); }, isExpanded: true, decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10)))),
-        _field('Binding Operator', DropdownButtonFormField<String>(value: data.bindingOperatorId, items: items, onChanged: (v) { data.bindingOperatorId = v; onChange(); }, isExpanded: true, decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10)))),
-        _field('Packing Operator', DropdownButtonFormField<String>(value: data.packingOperatorId, items: items, onChanged: (v) { data.packingOperatorId = v; onChange(); }, isExpanded: true, decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10)))),
-        _field('QC Operator', DropdownButtonFormField<String>(value: data.qcOperatorId, items: items, onChanged: (v) { data.qcOperatorId = v; onChange(); }, isExpanded: true, decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10)))),
+        _field('Print Operator', SearchableDropdown<String>(value: data.printOperatorId, items: items, onChanged: (v) { data.printOperatorId = v; onChange(); }, isExpanded: true, decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10)))),
+        _field('Designer', SearchableDropdown<String>(value: data.designerId, items: items, onChanged: (v) { data.designerId = v; onChange(); }, isExpanded: true, decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10)))),
+        _field('Binding Operator', SearchableDropdown<String>(value: data.bindingOperatorId, items: items, onChanged: (v) { data.bindingOperatorId = v; onChange(); }, isExpanded: true, decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10)))),
+        _field('Packing Operator', SearchableDropdown<String>(value: data.packingOperatorId, items: items, onChanged: (v) { data.packingOperatorId = v; onChange(); }, isExpanded: true, decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10)))),
+        _field('QC Operator', SearchableDropdown<String>(value: data.qcOperatorId, items: items, onChanged: (v) { data.qcOperatorId = v; onChange(); }, isExpanded: true, decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10)))),
       ]),
       _FormSection(title: 'Production Dates', children: [
         _datePicker(context, 'Print Date', data.printDate, (v) { data.printDate = v; onChange(); }),

@@ -1,4 +1,5 @@
-﻿import 'dart:ui' show ImageFilter;
+﻿import '../../core/widgets/searchable_dropdown.dart';
+import 'dart:ui' show ImageFilter;
 import '../../core/widgets/shell_scaffold.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
@@ -262,7 +263,7 @@ class _QuotationsViewState extends State<_QuotationsView> {
             const Text('New Quotation', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
             const SizedBox(height: 16),
             if (loading) const Center(child: CircularProgressIndicator())
-            else DropdownButtonFormField<String>(
+            else SearchableDropdown<String>(
               initialValue: selectedJobId,
               hint: const Text('Select Job Card', style: TextStyle(color: AppColors.textDisabled)),
               decoration: const InputDecoration(labelText: 'Job Card'),
