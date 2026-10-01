@@ -64,7 +64,7 @@ router.get("/", requirePermission("jobs.view"), async (req, res) => {
   if (createdTo) base = base.where("job_cards.created_at", "<=", createdTo);
   if (order_type) base = base.where("job_cards.order_type", order_type);
 
-  base = applySearch(base, params.search, ["job_cards.title", "job_cards.description", "clients.name", "job_cards.job_type"]);
+  base = applySearch(base, params.search, ["job_cards.job_number", "job_cards.title", "job_cards.description", "clients.name", "job_cards.job_type"]);
 
   let countQ = db("job_cards")
     .where("job_cards.tenant_id", tenantId)
@@ -79,7 +79,7 @@ router.get("/", requirePermission("jobs.view"), async (req, res) => {
   if (createdFrom) countQ = countQ.where("job_cards.created_at", ">=", createdFrom);
   if (createdTo) countQ = countQ.where("job_cards.created_at", "<=", createdTo);
   if (order_type) countQ = countQ.where("job_cards.order_type", order_type);
-  countQ = applySearch(countQ, params.search, ["job_cards.title", "job_cards.description", "clients.name", "job_cards.job_type"]);
+  countQ = applySearch(countQ, params.search, ["job_cards.job_number", "job_cards.title", "job_cards.description", "clients.name", "job_cards.job_type"]);
 
   const result = await paginate(base, countQ, params, JOB_SORT_COLS, "job_cards");
   res.json(result);

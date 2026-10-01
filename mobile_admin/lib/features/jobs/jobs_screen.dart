@@ -152,7 +152,7 @@ class _JobsViewState extends State<_JobsView> {
                     controller: _searchCtrl,
                     onChanged: (v) => context.read<JobsBloc>().add(JobsSearchChanged(v)),
                     decoration: InputDecoration(
-                      hintText: 'Search jobs, client…',
+                      hintText: 'Search job no, title, client…',
                       prefixIcon: const Icon(Icons.search, size: 20),
                       suffixIcon: _searchCtrl.text.isNotEmpty
                           ? IconButton(icon: const Icon(Icons.clear, size: 18), onPressed: () { _searchCtrl.clear(); context.read<JobsBloc>().add(const JobsSearchChanged('')); })
