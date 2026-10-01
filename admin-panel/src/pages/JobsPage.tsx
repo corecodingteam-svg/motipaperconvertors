@@ -1,4 +1,5 @@
 import { toast } from "sonner";
+import { scrollToTop } from "../lib/scrollToTop.ts";
 import { fmtDate } from "../lib/fmtDate.ts";
 import TableSkeleton from "../components/TableSkeleton.tsx";
 import { useAuthStore, useHasPerm } from "../store/auth.ts";
@@ -1415,7 +1416,7 @@ export default function JobsPage() {
           machines={machines}
           staffUsers={staffUsersMain}
           onClose={() => setViewJob(null)}
-          onEdit={() => { setEditing(viewJob); setViewJob(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+          onEdit={() => { setEditing(viewJob); setViewJob(null); scrollToTop(); }}
           onPrint={() => { api.get(`/admin/jobs/${viewJob.id}`).then(r => setPrintJob(r.data)); setViewJob(null); }}
         />
       )}
@@ -1470,7 +1471,7 @@ export default function JobsPage() {
         search={list.search} onSearch={actions.setSearch} placeholder="Search job no, title, client..."
         activeFilters={list.filters} onFilter={actions.setFilter} onReset={actions.resetFilters}
         filters={[{ key: "status", label: "Status", options: STATUS_OPTIONS }]}
-        rightSlot={<div style={{ display: "flex", gap: 8 }}><PrintListButton /><button onClick={handleExport} disabled={exporting} style={{ padding: "8px 14px", border: "1px solid #e5e7eb", borderRadius: 7, cursor: "pointer", background: "#fff", fontSize: 13, fontWeight: 500, color: "#374151", display: "flex", alignItems: "center", gap: 6 }}>{exporting ? "Exporting…" : "⬇ Export Jobs"}</button>{canCreate && <button onClick={() => { setShowForm(true); window.scrollTo({ top: 0, behavior: "smooth" }); }} style={{ padding: "8px 18px", background: "#3b5bdb", color: "#fff", border: "none", borderRadius: 7, cursor: "pointer", fontWeight: 600 }}>+ New Job</button>}</div>}
+        rightSlot={<div style={{ display: "flex", gap: 8 }}><PrintListButton /><button onClick={handleExport} disabled={exporting} style={{ padding: "8px 14px", border: "1px solid #e5e7eb", borderRadius: 7, cursor: "pointer", background: "#fff", fontSize: 13, fontWeight: 500, color: "#374151", display: "flex", alignItems: "center", gap: 6 }}>{exporting ? "Exporting…" : "⬇ Export Jobs"}</button>{canCreate && <button onClick={() => { setShowForm(true); scrollToTop(); }} style={{ padding: "8px 18px", background: "#3b5bdb", color: "#fff", border: "none", borderRadius: 7, cursor: "pointer", fontWeight: 600 }}>+ New Job</button>}</div>}
       />
       <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
         <label style={{ fontSize: 13, color: "#555", display: "flex", alignItems: "center", gap: 6 }}>
@@ -1554,7 +1555,7 @@ export default function JobsPage() {
                     {currentRole !== "operator" && currentRole !== "staff" && (
                       <>
                         <IconButton icon="🖨️" tooltip="Print Job Card" onClick={() => api.get(`/admin/jobs/${j.id}`).then(r => setPrintJob(r.data))} />
-                        {canEdit && <IconButton icon="✏️" tooltip="Edit" onClick={() => { setEditing(j); window.scrollTo({ top: 0, behavior: "smooth" }); }} />}
+                        {canEdit && <IconButton icon="✏️" tooltip="Edit" onClick={() => { setEditing(j); scrollToTop(); }} />}
                         {canDelete && <IconButton icon="🗑️" tooltip="Delete" onClick={() => setDeleteConfirm(j.id)} danger />}
                       </>
                     )}
