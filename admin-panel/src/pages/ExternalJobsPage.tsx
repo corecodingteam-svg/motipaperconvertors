@@ -842,6 +842,7 @@ function JobForm({ initial, initialPapers, clients, machines, plateSources, onCr
               <select style={inputStyle} value={form.binding_type as string} onChange={e => setForm(f => ({ ...f, binding_type: e.target.value }))}>
                 <option value="">— select type —</option>
                 {bindingTypes.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
+                {form.binding_type && !bindingTypes.some(b => b.name === form.binding_type) && <option value={form.binding_type as string}>{form.binding_type as string}</option>}
               </select>
             </label>
           </div>
