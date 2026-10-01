@@ -219,7 +219,7 @@ class _FinishingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final flags = <String>[];
-    if (job.isBinding == true) flags.add('Binding');
+    if (job.isBinding == true) flags.add('Binding${job.bindingType != null && job.bindingType!.isNotEmpty ? " (${job.bindingType})" : ""}');
     if (job.isUV == true) flags.add('UV Coating');
     if (job.isFoil == true) flags.add('Foil Stamping');
     if (job.isDieCutting == true) flags.add('Die Cutting');

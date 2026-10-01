@@ -330,7 +330,7 @@ function PrintTemplateSettings() {
 
 export default function SettingsPage() {
   const role = useAuthStore(s => s.role);
-  const [tab, setTab] = useState<"job_types" | "print_colors" | "plate_sources" | "staff_types" | "print_template">("job_types");
+  const [tab, setTab] = useState<"job_types" | "print_colors" | "plate_sources" | "binding_types" | "staff_types" | "print_template">("job_types");
 
   if (role === "staff" || role === "operator") return null;
 
@@ -353,6 +353,7 @@ export default function SettingsPage() {
           <button style={tabStyle(tab === "job_types")} onClick={() => setTab("job_types")}>Job Types</button>
           <button style={tabStyle(tab === "print_colors")} onClick={() => setTab("print_colors")}>Print Colors</button>
           <button style={tabStyle(tab === "plate_sources")} onClick={() => setTab("plate_sources")}>Plate Sources</button>
+          <button style={tabStyle(tab === "binding_types")} onClick={() => setTab("binding_types")}>Binding Types</button>
           <button style={tabStyle(tab === "staff_types")} onClick={() => setTab("staff_types")}>Staff Types</button>
           <button style={tabStyle(tab === "print_template")} onClick={() => setTab("print_template")}>Print Template</button>
         </div>
@@ -376,6 +377,13 @@ export default function SettingsPage() {
               label="Plate Source"
               queryKey="settings-plate-sources"
               endpoint="/admin/settings/plate-sources"
+            />
+          )}
+          {tab === "binding_types" && (
+            <SettingsList
+              label="Binding Type"
+              queryKey="settings-binding-types"
+              endpoint="/admin/settings/binding-types"
             />
           )}
           {tab === "staff_types" && (

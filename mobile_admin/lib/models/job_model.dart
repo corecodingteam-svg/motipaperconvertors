@@ -27,6 +27,7 @@ class Job {
   final bool? proofRequired;
   final String? printOperatorName;
   final String? laminationType;
+  final String? bindingType;
   final bool? isLamination;
   // Print process
   final bool? isOffset;
@@ -97,6 +98,7 @@ class Job {
     this.proofRequired,
     this.printOperatorName,
     this.laminationType,
+    this.bindingType,
     this.isLamination,
     this.isOffset,
     this.isDigital,
@@ -163,6 +165,7 @@ class Job {
     proofRequired: j['proof_required'] as bool?,
     printOperatorName: j['print_operator_name'] as String?,
     laminationType: j['lamination_type'] as String?,
+    bindingType: j['binding_type'] as String?,
     isLamination: j['is_lamination'] as bool?,
     isOffset: j['is_offset'] as bool?,
     isDigital: j['is_digital'] as bool?,

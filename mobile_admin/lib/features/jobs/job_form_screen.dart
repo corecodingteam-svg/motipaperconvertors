@@ -40,6 +40,7 @@ class JobFormData {
   bool isPasting = false;
   bool isLamination = false;
   String? laminationType;
+  String? bindingType;
   bool isFolding = false;
   bool isGumming = false;
   String? printOperatorId;
@@ -98,6 +99,7 @@ class JobFormData {
     'isPasting': isPasting,
     'isLamination': isLamination,
     if (isLamination && laminationType != null) 'laminationType': laminationType,
+    if (isBinding && bindingType != null) 'bindingType': bindingType,
     'isFolding': isFolding,
     'isGumming': isGumming,
     if (printOperatorId != null) 'printOperatorId': printOperatorId,
@@ -147,6 +149,7 @@ class _JobFormScreenState extends State<JobFormScreen> {
   List<_Option> _staff = [];
   List<_Option> _paperStock = [];
   List<String> _jobTypes = [];
+  List<String> _bindingTypes = [];
   bool _loadingMeta = true;
 
   @override
@@ -188,6 +191,7 @@ class _JobFormScreenState extends State<JobFormScreen> {
     _data.isPasting = j.isPasting ?? false;
     _data.isLamination = j.isLamination ?? false;
     _data.laminationType = j.laminationType;
+    _data.bindingType = j.bindingType;
     _data.isFolding = j.isFolding ?? false;
     _data.isGumming = j.isGumming ?? false;
     _data.isNumbering = j.isNumbering ?? false;
@@ -223,6 +227,7 @@ class _JobFormScreenState extends State<JobFormScreen> {
         ApiClient.instance.get('/admin/users', queryParameters: {'limit': 200, 'status': 'active'}),
         ApiClient.instance.get('/admin/inventory/paper', queryParameters: {'limit': 5000, 'inventory_type': inventoryType}),
         ApiClient.instance.get('/admin/settings/job-types'),
+        ApiClient.instance.get('/admin/settings/binding-types'),
       ]);
       if (!mounted) return;
       setState(() {
@@ -231,6 +236,7 @@ class _JobFormScreenState extends State<JobFormScreen> {
         _staff = (results[2].data['data'] as List? ?? []).map((e) => _Option(e['id'] as String, e['name'] as String? ?? '')).toList();
         _paperStock = (results[3].data['data'] as List? ?? []).map((e) => _Option(e['id'] as String, '${e['name']} ${e['gsm'] != null ? "${e['gsm']}gsm" : ""} ${e['size'] ?? ""}'.trim())).toList();
         _jobTypes = (results[4].data as List? ?? []).map((e) => e['name'] as String? ?? '').where((s) => s.isNotEmpty).toList();
+        _bindingTypes = (results[5].data as List? ?? []).map((e) => e['name'] as String? ?? '').where((s) => s.isNotEmpty).toList();
         _loadingMeta = false;
       });
     } catch (_) {
@@ -336,7 +342,7 @@ class _JobFormScreenState extends State<JobFormScreen> {
                     onChange: () => setState(() { _stepError = false; }),
                     onOrderTypeChanged: () { setState(() {}); _reloadPaperStock(); }),
                   _Step2PaperPrint(data: _data, paperStock: _paperStock, onChange: () => setState(() {})),
-                  _Step3Finishing(data: _data, onChange: () => setState(() {})),
+                  _Step3Finishing(data: _data, bindingTypes: _bindingTypes, onChange: () => setState(() {})),
                   _Step4Assignment(data: _data, staff: _staff, onChange: () => setState(() {})),
                   _Step5Pricing(data: _data, onChange: () => setState(() {})),
                   _Step6Delivery(data: _data, onChange: () => setState(() {})),
@@ -665,13 +671,18 @@ class _Step2PaperPrint extends StatelessWidget {
 class _Step3Finishing extends StatelessWidget {
   final JobFormData data;
   final VoidCallback onChange;
-  const _Step3Finishing({required this.data, required this.onChange});
+  final List<String> bindingTypes;
+  const _Step3Finishing({required this.data, required this.bindingTypes, required this.onChange});
 
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _FormSection(title: 'Finishing Options', children: [
-        _toggle('Binding', data.isBinding, (v) { data.isBinding = v; onChange(); }),
+        _toggle('Binding', data.isBinding, (v) { data.isBinding = v; if (!v) data.bindingType = null; onChange(); }),
+        if (data.isBinding)
+          _dropdownField<String>('Binding Type', bindingTypes.contains(data.bindingType) ? data.bindingType : null,
+            bindingTypes.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+            (v) { data.bindingType = v; onChange(); }),
         _toggle('UV Coating', data.isUV, (v) { data.isUV = v; onChange(); }),
         _toggle('Foil Stamping', data.isFoil, (v) { data.isFoil = v; onChange(); }),
         _toggle('Die Cutting', data.isDieCutting, (v) { data.isDieCutting = v; onChange(); }),

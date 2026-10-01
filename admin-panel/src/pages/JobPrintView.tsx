@@ -15,7 +15,7 @@ interface Job {
   is_offset: boolean; is_digital: boolean; is_screen: boolean;
   print_colors: string; print_operator: string; print_operator_name?: string; print_date: string;
   is_numbering: boolean; numbering_from: number; numbering_to: number;
-  is_binding: boolean; is_uv: boolean; is_foil: boolean; is_die_cutting: boolean;
+  is_binding: boolean; binding_type?: string; is_uv: boolean; is_foil: boolean; is_die_cutting: boolean;
   is_half_cutting: boolean; is_creasing: boolean; is_pasting: boolean;
   is_lamination: boolean; lamination_type?: string; is_folding: boolean; is_gumming: boolean;
   post_print_date: string; binding_operator: string; packing_operator: string;
@@ -63,7 +63,7 @@ export default function JobPrintView({ job, template, onClose }: { job: Job; tem
   const finishingItems = [
     job.is_offset && "Offset", job.is_digital && "Digital", job.is_screen && "Screen",
     job.is_numbering && ("Numbering (" + (job.numbering_from || "") + "–" + (job.numbering_to || "") + ")"),
-    job.is_binding && "Binding", job.is_uv && "UV", job.is_foil && "Foil",
+    job.is_binding && ("Binding" + (job.binding_type ? ` (${job.binding_type})` : "")), job.is_uv && "UV", job.is_foil && "Foil",
     job.is_die_cutting && "Die Cutting", job.is_half_cutting && "Half Cutting",
     job.is_creasing && "Creasing", job.is_pasting && "Pasting",
     job.is_lamination && ("Lamination" + (job.lamination_type ? ` (${job.lamination_type.charAt(0).toUpperCase() + job.lamination_type.slice(1)})` : "")), job.is_folding && "Folding", job.is_gumming && "Gumming",

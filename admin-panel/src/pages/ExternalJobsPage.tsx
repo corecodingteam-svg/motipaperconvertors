@@ -45,7 +45,7 @@ type Job = {
   is_offset: boolean; is_digital: boolean; is_screen: boolean;
   print_colors: string; print_operator: string; print_date: string;
   is_numbering: boolean; numbering_from: number; numbering_to: number;
-  is_binding: boolean; is_uv: boolean; is_foil: boolean; is_die_cutting: boolean;
+  is_binding: boolean; binding_type?: string; is_uv: boolean; is_foil: boolean; is_die_cutting: boolean;
   is_half_cutting: boolean; is_creasing: boolean; is_pasting: boolean;
   is_lamination: boolean; lamination_type?: string; is_folding: boolean; is_gumming: boolean;
   post_print_date: string; binding_operator: string; packing_operator: string;
@@ -121,6 +121,7 @@ function buildApiPayload(form: FormState, papers: PaperLine[]) {
     numberingFrom: num("numbering_from"),
     numberingTo: num("numbering_to"),
     isBinding: bool("is_binding"),
+    bindingType: bool("is_binding") ? (str("binding_type") || undefined) : undefined,
     isUv: bool("is_uv"),
     isFoil: bool("is_foil"),
     isDieCutting: bool("is_die_cutting"),
@@ -188,6 +189,7 @@ function buildPatchPayload(form: FormState, papers: PaperLine[]) {
     numbering_from: num("numbering_from"),
     numbering_to: num("numbering_to"),
     is_binding: bool("is_binding"),
+    binding_type: bool("is_binding") ? (str("binding_type") || null) : null,
     is_uv: bool("is_uv"),
     is_foil: bool("is_foil"),
     is_die_cutting: bool("is_die_cutting"),
@@ -224,7 +226,7 @@ function initForm(initial?: Partial<Job>): FormState {
       is_offset: false, is_digital: false, is_screen: false,
       print_colors: "", print_operator: "", print_date: "",
       is_numbering: false, numbering_from: "", numbering_to: "",
-      is_binding: false, is_uv: false, is_foil: false, is_die_cutting: false,
+      is_binding: false, binding_type: "", is_uv: false, is_foil: false, is_die_cutting: false,
       is_half_cutting: false, is_creasing: false, is_pasting: false,
       is_lamination: false, lamination_type: "", is_folding: false, is_gumming: false,
       post_print_date: "", binding_operator: "", packing_operator: "",
@@ -269,6 +271,7 @@ function initForm(initial?: Partial<Job>): FormState {
     numbering_from: s(initial.numbering_from),
     numbering_to: s(initial.numbering_to),
     is_binding: initial.is_binding ?? false,
+    binding_type: (initial as Record<string, unknown>).binding_type as string ?? "",
     is_uv: initial.is_uv ?? false,
     is_foil: initial.is_foil ?? false,
     is_die_cutting: initial.is_die_cutting ?? false,
@@ -469,6 +472,7 @@ function JobForm({ initial, initialPapers, clients, machines, plateSources, onCr
 
   const isNumbering = boolField(form, "is_numbering");
   const isLamination = boolField(form, "is_lamination");
+  const isBinding = boolField(form, "is_binding");
 
   // Paper stocks — external jobs use external inventory pool
   const { data: paperStocks = [] } = useQuery<PaperStock[]>({
@@ -492,6 +496,11 @@ function JobForm({ initial, initialPapers, clients, machines, plateSources, onCr
   const { data: printColors = [] } = useQuery<SettingItem[]>({
     queryKey: ["settings-print-colors"],
     queryFn: () => api.get("/admin/settings/print-colors").then(r => r.data),
+  });
+
+  const { data: bindingTypes = [] } = useQuery<SettingItem[]>({
+    queryKey: ["settings-binding-types"],
+    queryFn: () => api.get("/admin/settings/binding-types").then(r => r.data),
   });
 
   // Derived option arrays
@@ -823,6 +832,17 @@ function JobForm({ initial, initialPapers, clients, machines, plateSources, onCr
             <label style={labelStyle}>
               Numbering To
               <input style={inputStyle} type="number" value={form.numbering_to as string} onChange={set("numbering_to")} />
+            </label>
+          </div>
+        )}
+        {isBinding && (
+          <div style={{ ...gridStyle, marginBottom: 20 }}>
+            <label style={labelStyle}>
+              Binding Type
+              <select style={inputStyle} value={form.binding_type as string} onChange={e => setForm(f => ({ ...f, binding_type: e.target.value }))}>
+                <option value="">— select type —</option>
+                {bindingTypes.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
+              </select>
             </label>
           </div>
         )}
@@ -1161,7 +1181,7 @@ function JobDetailModal({ job, clients, machines, staffUsers, onClose, onEdit, o
           {sectionTitle("Post-Print")}
           {row("Numbering", bool(job.is_numbering))}
           {job.is_numbering && row("Numbering From–To", `${job.numbering_from ?? "—"} – ${job.numbering_to ?? "—"}`)}
-          {row("Binding", bool(job.is_binding))}
+          {row("Binding", job.is_binding ? (job.binding_type ? `Yes – ${job.binding_type}` : "Yes") : "No")}
           {row("UV", bool(job.is_uv))}
           {row("Foil", bool(job.is_foil))}
           {row("Die Cutting", bool(job.is_die_cutting))}
