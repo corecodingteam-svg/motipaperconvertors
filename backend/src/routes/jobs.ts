@@ -231,7 +231,7 @@ const CreateJobSchema = z.object({
   isCreasing: z.boolean().optional(),
   isPasting: z.boolean().optional(),
   isLamination: z.boolean().optional(),
-  laminationType: z.enum(["glass", "matte"]).optional(),
+  laminationType: z.enum(["gloss", "glass", "matte"]).optional(),
   isFolding: z.boolean().optional(),
   isGumming: z.boolean().optional(),
   postPrintDate: z.string().optional(),
