@@ -636,10 +636,6 @@ function JobForm({ initial, initialPapers, clients, machines, plateSources, onCr
             />
           </label>
           <label style={labelStyle}>
-            Sheet Size
-            <input style={inputStyle} value={form.sheet_size as string} onChange={set("sheet_size")} placeholder="e.g. 12X18" />
-          </label>
-          <label style={labelStyle}>
             Sheet Count
             <input style={inputStyle} type="number" min={0} value={form.sheet_count as string} onChange={set("sheet_count")} placeholder="e.g. 500" />
           </label>
