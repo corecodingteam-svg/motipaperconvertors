@@ -119,7 +119,6 @@ class _JobDetailView extends StatelessWidget {
                 _InfoRow('Order Type', job.orderType == 'in_house' ? 'In House' : job.orderType == 'external' ? 'External' : (job.orderType ?? '—')),
                 if (job.machineName != null) _InfoRow('Machine', job.machineName!),
                 if (job.quantity != null) _InfoRow('Quantity', '${job.quantity}'),
-                if (job.sheetSize != null) _InfoRow('Sheet Size', job.sheetSize!),
                 if (job.sheetCount != null) _InfoRow('Sheet Count', '${job.sheetCount}'),
                 if (job.description != null && job.description!.isNotEmpty) _InfoRow('Description', job.description!),
                 _InfoRow('Created', Fmt.date(job.createdAt)),

@@ -132,7 +132,6 @@ export default function JobPrintView({ job, template, onClose }: { job: Job; tem
 
             {section("Paper & Machine")}
             {cell("Machine", job.machine_name)}
-            {cell("Sheet Size", job.sheet_size)}
             <div style={{ gridColumn: "1 / -1", padding: "4px 6px", borderBottom: "1px solid #f3f4f6" }}>
               <div style={{ fontSize: fsLabel, color: "#6b7280", marginBottom: 4 }}>Papers Used</div>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: fs }}>

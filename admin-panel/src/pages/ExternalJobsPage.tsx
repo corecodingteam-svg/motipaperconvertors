@@ -1152,7 +1152,6 @@ function JobDetailModal({ job, clients, machines, staffUsers, onClose, onEdit, o
           {row("Machine", machineName)}
           {row("Paper Type", job.paper_type)}
           {row("Paper GSM", job.paper_gsm)}
-          {row("Sheet Size", job.sheet_size)}
           {row("Sheet Count", job.sheet_count)}
 
           {sectionTitle("Pre-Print")}
@@ -1231,7 +1230,7 @@ export default function ExternalJobsPage() {
       const rows = jobs.map(j => ({
         job_number: j.job_number, title: j.title, client_name: j.client_name,
         job_type: j.job_type, order_type: j.order_type, status: j.status,
-        quantity: j.quantity, sheet_size: j.sheet_size, paper_type: j.paper_type,
+        quantity: j.quantity, paper_type: j.paper_type,
         paper_gsm: j.paper_gsm, quoted_price: j.quoted_price,
         advance_amount: j.advance_amount,
         due_date: j.due_date ? j.due_date.slice(0, 10) : "",
@@ -1426,7 +1425,6 @@ export default function ExternalJobsPage() {
               {col("#", "job_number")}
               {col("Job Title", "job_type")}
               <th style={th}>Company</th>
-              <th style={th}>Sheet Size</th>
               {col("Qty", "quantity")}
               {col("Status", "status")}
               {col("Created", "created_at")}
@@ -1437,14 +1435,13 @@ export default function ExternalJobsPage() {
             </tr>
           </thead>
           <tbody>
-            {isLoading && <TableSkeleton cols={10} />}
+            {isLoading && <TableSkeleton cols={9} />}
             {data?.data?.map((j) => (
               <tr key={j.id} style={{ borderBottom: "1px solid #f0f0f0", cursor: "pointer", background: (STATUS_COLOR[j.status] ?? "#868e96") + "4D", borderLeft: `3px solid ${STATUS_COLOR[j.status] ?? "#868e96"}` }}
                 onClick={() => setViewJob(j)}>
                 <td style={{ ...td, color: STATUS_COLOR[j.status] ?? "#868e96", fontWeight: 700 }}>{j.job_number}</td>
                 <td style={{ ...td, fontWeight: 600, color: "#111827" }}>{j.job_type ?? "—"}</td>
                 <td style={{ ...td, color: "#374151" }}>{j.client_company_name || j.client_name || "—"}</td>
-                <td style={{ ...td, color: "#374151" }}>{j.sheet_size ?? "—"}</td>
                 <td style={{ ...td, color: "#374151" }}>{j.quantity ?? "—"}</td>
                 <td style={td} onClick={e => e.stopPropagation()}>
                   {currentRole === "operator" || currentRole === "staff" ? (
@@ -1503,7 +1500,7 @@ export default function ExternalJobsPage() {
                 </td>
               </tr>
             ))}
-            {!isLoading && !data?.data?.length && <tr><td colSpan={10} style={{ ...td, textAlign: "center", color: "#888", padding: 24 }}>No jobs found</td></tr>}
+            {!isLoading && !data?.data?.length && <tr><td colSpan={9} style={{ ...td, textAlign: "center", color: "#888", padding: 24 }}>No jobs found</td></tr>}
           </tbody>
         </table>
       </div>

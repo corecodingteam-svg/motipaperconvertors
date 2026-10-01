@@ -549,8 +549,6 @@ class _Step1BasicInfo extends StatelessWidget {
               errorText: quantityError ? 'Required' : null,
             ),
           ))),
-          const SizedBox(width: 12),
-          Expanded(child: _textField('Sheet Size', data.sheetSize, (v) { data.sheetSize = v; onChange(); }, hint: 'e.g. A4, 12x18')),
         ]),
         _textField('Sheet Count', data.sheetCount?.toString(), (v) { data.sheetCount = int.tryParse(v); onChange(); }, type: TextInputType.number, hint: 'e.g. 500'),
         _textField('Description', data.description, (v) { data.description = v; onChange(); }, hint: 'Optional notes'),
