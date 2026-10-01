@@ -24,14 +24,14 @@ function applyJobSearch(query: Knex.QueryBuilder, search: string | null): Knex.Q
 const router = Router();
 router.use(requireTenant);
 
-const JOB_SORT_COLS = ["job_number", "title", "status", "due_date", "created_at", "quoted_price"];
+const JOB_SORT_COLS = ["job_number", "title", "status", "due_date", "created_at", "quoted_price", "invoice_date"];
 
 // ── GET /jobs ─────────────────────────────────────────────
 // Query params: page, limit, search, sortBy, sortDir, status, clientId, machineId, dueDateFrom, dueDateTo
 router.get("/", requirePermission("jobs.view"), async (req, res) => {
   const params = parseListParams(req, { sortBy: "created_at" });
   const tenantId = req.user.tenantId!;
-  const { status, clientId, machineId, dueDateFrom, dueDateTo, assignedOperatorId, createdFrom, createdTo, order_type } = req.query as Record<string, string>;
+  const { status, clientId, machineId, dueDateFrom, dueDateTo, assignedOperatorId, createdFrom, createdTo, order_type, taxInvoice } = req.query as Record<string, string>;
 
   let base = db("job_cards")
     .where("job_cards.tenant_id", tenantId)
@@ -76,6 +76,10 @@ router.get("/", requirePermission("jobs.view"), async (req, res) => {
   if (createdFrom) base = base.where("job_cards.created_at", ">=", createdFrom);
   if (createdTo) base = base.where("job_cards.created_at", "<=", createdTo);
   if (order_type) base = base.where("job_cards.order_type", order_type);
+  // taxInvoice=pending → tax invoice not filled yet; taxInvoice=done → tax invoice filled
+  const taxBlank = "(job_cards.tax_invoice_no IS NULL OR TRIM(job_cards.tax_invoice_no) = '')";
+  if (taxInvoice === "pending") base = base.whereRaw(taxBlank);
+  if (taxInvoice === "done") base = base.whereRaw(`NOT ${taxBlank}`);
 
   base = applyJobSearch(base, params.search);
 
@@ -92,6 +96,8 @@ router.get("/", requirePermission("jobs.view"), async (req, res) => {
   if (createdFrom) countQ = countQ.where("job_cards.created_at", ">=", createdFrom);
   if (createdTo) countQ = countQ.where("job_cards.created_at", "<=", createdTo);
   if (order_type) countQ = countQ.where("job_cards.order_type", order_type);
+  if (taxInvoice === "pending") countQ = countQ.whereRaw(taxBlank);
+  if (taxInvoice === "done") countQ = countQ.whereRaw(`NOT ${taxBlank}`);
   countQ = applyJobSearch(countQ, params.search);
 
   const result = await paginate(base, countQ, params, JOB_SORT_COLS, "job_cards");

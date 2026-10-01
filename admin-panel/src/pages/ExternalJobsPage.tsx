@@ -523,18 +523,17 @@ function JobForm({ initial, initialPapers, clients, machines, plateSources, onCr
 
   // Per-step validation
   function validateStep(s: number): boolean {
+    // Editing an existing job: its saved values are trusted, so steps can be moved through freely
+    if (initial?.id) return true;
     if (s === 1) {
       const today = new Date().toISOString().slice(0, 10);
       const dueDate = (form.due_date as string).trim();
-      // An existing job may already carry a past due date; only a changed date has to be today or later
-      const initialDue = ((initial?.due_date as string | undefined) ?? "").slice(0, 10);
-      const dueOk = dueDate >= today || (!!initial?.id && dueDate === initialDue);
       return (
         (form.client_id as string).trim() !== "" &&
         (form.job_type as string).trim() !== "" &&
         (form.quantity as string).trim() !== "" &&
         dueDate !== "" &&
-        dueOk
+        dueDate >= today
       );
     }
     if (s === 2) {
@@ -1248,7 +1247,7 @@ export default function ExternalJobsPage() {
   async function handleExport() {
     setExporting(true);
     try {
-      const res = await api.get("/admin/jobs", { params: { limit: 5000, order_type: "external" } });
+      const res = await api.get("/admin/jobs", { params: { limit: 5000, order_type: "external", taxInvoice: "pending" } });
       const jobs: Job[] = res.data.data ?? [];
       const rows = jobs.map(j => ({
         job_number: j.job_number, title: j.title, client_name: j.client_name,
@@ -1268,7 +1267,7 @@ export default function ExternalJobsPage() {
 
   const { data, isLoading } = useQuery<PagedResult<Job>>({
     queryKey: ["external-jobs", actions.toParams()],
-    queryFn: () => api.get("/admin/jobs", { params: { ...actions.toParams(), order_type: "external" } }).then((r) => r.data),
+    queryFn: () => api.get("/admin/jobs", { params: { ...actions.toParams(), order_type: "external", taxInvoice: "pending" } }).then((r) => r.data),
     placeholderData: keepPreviousData,
   });
 
