@@ -1269,7 +1269,10 @@ function JobDetailModal({ job, clients, machines, staffUsers, onClose, onEdit, o
   );
 }
 
-export default function JobsPage() {
+// taxInvoiceDone = the "Tax Invoice Cards" view: same list, but cards whose tax invoice is filled (internal + external)
+export default function JobsPage({ taxInvoiceDone = false }: { taxInvoiceDone?: boolean }) {
+  const listFilter = taxInvoiceDone ? { taxInvoice: "done" } : { order_type: "in_house", taxInvoice: "pending" };
+  const extraCols = taxInvoiceDone ? 2 : 0;
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Job | null>(null);
   const [viewJob, setViewJob] = useState<Job | null>(null);
@@ -1287,18 +1290,19 @@ export default function JobsPage() {
   async function handleExport() {
     setExporting(true);
     try {
-      const res = await api.get("/admin/jobs", { params: { limit: 5000, order_type: "in_house", taxInvoice: "pending" } });
+      const res = await api.get("/admin/jobs", { params: { limit: 5000, ...listFilter } });
       const jobs: Job[] = res.data.data ?? [];
       const rows = jobs.map(j => ({
         job_number: j.job_number, title: j.title, client_name: j.client_name,
         job_type: j.job_type, order_type: j.order_type, status: j.status,
+        ...(taxInvoiceDone ? { tax_invoice_no: j.tax_invoice_no, invoice_date: j.invoice_date ? j.invoice_date.slice(0, 10) : "" } : {}),
         quantity: j.quantity, paper_type: j.paper_type,
         paper_gsm: j.paper_gsm, quoted_price: j.quoted_price,
         advance_amount: j.advance_amount,
         due_date: j.due_date ? j.due_date.slice(0, 10) : "",
         created_at: "",
       }));
-      exportToCsv(`jobs-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+      exportToCsv(`${taxInvoiceDone ? "tax-invoice-jobs" : "jobs"}-${new Date().toISOString().slice(0, 10)}.csv`, rows);
     } finally {
       setExporting(false);
     }
@@ -1306,8 +1310,8 @@ export default function JobsPage() {
   const [list, actions] = useListState({ sortBy: "created_at", filters: {} });
 
   const { data, isLoading } = useQuery<PagedResult<Job>>({
-    queryKey: ["jobs", actions.toParams()],
-    queryFn: () => api.get("/admin/jobs", { params: { ...actions.toParams(), order_type: "in_house", taxInvoice: "pending" } }).then((r) => r.data),
+    queryKey: ["jobs", taxInvoiceDone ? "tax-invoice" : "main", actions.toParams()],
+    queryFn: () => api.get("/admin/jobs", { params: { ...actions.toParams(), ...listFilter } }).then((r) => r.data),
     placeholderData: keepPreviousData,
   });
 
@@ -1419,7 +1423,7 @@ export default function JobsPage() {
           onPrint={() => { api.get(`/admin/jobs/${viewJob.id}`).then(r => setPrintJob(r.data)); setViewJob(null); }}
         />
       )}
-      <h1 style={{ marginBottom: 20 }}>Job Cards</h1>
+      <h1 style={{ marginBottom: 20 }}>{taxInvoiceDone ? "Tax Invoice Cards" : "Job Cards"}</h1>
       {showForm && (
         <JobForm
           clients={clients}
@@ -1470,7 +1474,7 @@ export default function JobsPage() {
         search={list.search} onSearch={actions.setSearch} placeholder="Search job no, title, client..."
         activeFilters={list.filters} onFilter={actions.setFilter} onReset={actions.resetFilters}
         filters={[{ key: "status", label: "Status", options: STATUS_OPTIONS }]}
-        rightSlot={<div style={{ display: "flex", gap: 8 }}><PrintListButton /><button onClick={handleExport} disabled={exporting} style={{ padding: "8px 14px", border: "1px solid #e5e7eb", borderRadius: 7, cursor: "pointer", background: "#fff", fontSize: 13, fontWeight: 500, color: "#374151", display: "flex", alignItems: "center", gap: 6 }}>{exporting ? "Exporting…" : "⬇ Export Jobs"}</button>{canCreate && <button onClick={() => { setShowForm(true); scrollToTop(); }} style={{ padding: "8px 18px", background: "#3b5bdb", color: "#fff", border: "none", borderRadius: 7, cursor: "pointer", fontWeight: 600 }}>+ New Job</button>}</div>}
+        rightSlot={<div style={{ display: "flex", gap: 8 }}><PrintListButton /><button onClick={handleExport} disabled={exporting} style={{ padding: "8px 14px", border: "1px solid #e5e7eb", borderRadius: 7, cursor: "pointer", background: "#fff", fontSize: 13, fontWeight: 500, color: "#374151", display: "flex", alignItems: "center", gap: 6 }}>{exporting ? "Exporting…" : "⬇ Export Jobs"}</button>{canCreate && !taxInvoiceDone && <button onClick={() => { setShowForm(true); scrollToTop(); }} style={{ padding: "8px 18px", background: "#3b5bdb", color: "#fff", border: "none", borderRadius: 7, cursor: "pointer", fontWeight: 600 }}>+ New Job</button>}</div>}
       />
       <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
         <label style={{ fontSize: 13, color: "#555", display: "flex", alignItems: "center", gap: 6 }}>
@@ -1487,23 +1491,26 @@ export default function JobsPage() {
               {col("#", "job_number")}
               {col("Job Title", "job_type")}
               <th style={th}>Company</th>
+              {taxInvoiceDone && <th style={th}>Type</th>}
               {col("Qty", "quantity")}
               {col("Status", "status")}
               {col("Created", "created_at")}
               {col("Due", "due_date")}
               <th style={th}>Advance</th>
               {col("Quoted", "quoted_price")}
+              {taxInvoiceDone && col("Tax Invoice", "invoice_date")}
               <th style={th} />
             </tr>
           </thead>
           <tbody>
-            {isLoading && <TableSkeleton cols={9} />}
+            {isLoading && <TableSkeleton cols={9 + extraCols} />}
             {data?.data?.map((j) => (
               <tr key={j.id} style={{ borderBottom: "1px solid #f0f0f0", cursor: "pointer", background: (STATUS_COLOR[j.status] ?? "#868e96") + "4D", borderLeft: `3px solid ${STATUS_COLOR[j.status] ?? "#868e96"}` }}
                 onClick={() => api.get(`/admin/jobs/${j.id}`).then(r => setViewJob(r.data))}>
                 <td style={{ ...td, color: STATUS_COLOR[j.status] ?? "#868e96", fontWeight: 700 }}>{j.job_number}</td>
                 <td style={{ ...td, fontWeight: 600, color: "#111827" }}>{j.job_type ?? "—"}</td>
                 <td style={{ ...td, color: "#374151" }}>{j.client_company_name || j.client_name || "—"}</td>
+                {taxInvoiceDone && <td style={{ ...td, color: "#374151" }}>{j.order_type === "external" ? "External" : "Internal"}</td>}
                 <td style={{ ...td, color: "#374151" }}>{j.quantity ?? "—"}</td>
                 <td style={td} onClick={e => e.stopPropagation()}>
                   {currentRole === "operator" || currentRole === "staff" ? (
@@ -1524,6 +1531,7 @@ export default function JobsPage() {
                 <td style={{ ...td, color: "#374151" }}>{fmtDate(j.due_date)}</td>
                 <td style={{ ...td, color: "#1f2937", fontWeight: 500 }}>{j.advance_amount != null ? "Rs." + Number(j.advance_amount).toLocaleString("en-IN") : "—"}</td>
                 <td style={{ ...td, color: "#1f2937", fontWeight: 600 }}>{j.quoted_price ? "Rs." + Number(j.quoted_price).toLocaleString("en-IN") : "—"}</td>
+                {taxInvoiceDone && <td style={{ ...td, color: "#1f2937" }}>{j.tax_invoice_no}{j.invoice_date ? <span style={{ color: "#868e96" }}> · {fmtDate(j.invoice_date)}</span> : null}</td>}
                 <td style={td} onClick={e => e.stopPropagation()}>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     {/* ── Print Operator ── */}
@@ -1562,7 +1570,7 @@ export default function JobsPage() {
                 </td>
               </tr>
             ))}
-            {!isLoading && !data?.data?.length && <tr><td colSpan={9} style={{ ...td, textAlign: "center", color: "#888", padding: 24 }}>No jobs found</td></tr>}
+            {!isLoading && !data?.data?.length && <tr><td colSpan={9 + extraCols} style={{ ...td, textAlign: "center", color: "#888", padding: 24 }}>No jobs found</td></tr>}
           </tbody>
         </table>
       </div>

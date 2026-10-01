@@ -4,7 +4,6 @@ import LoginPage from "./pages/LoginPage.tsx";
 import DashboardPage from "./pages/DashboardPage.tsx";
 import JobsPage from "./pages/JobsPage.tsx";
 import ExternalJobsPage from "./pages/ExternalJobsPage.tsx";
-import TaxInvoiceJobsPage from "./pages/TaxInvoiceJobsPage.tsx";
 import ClientsPage from "./pages/ClientsPage.tsx";
 import MachinesPage from "./pages/MachinesPage.tsx";
 import InventoryPage from "./pages/InventoryPage.tsx";
@@ -39,7 +38,7 @@ export default function App() {
         <Route index element={<DashboardPage />} />
         <Route path="jobs" element={<JobsPage />} />
         <Route path="external-jobs" element={<ExternalJobsPage />} />
-        <Route path="tax-invoice-jobs" element={<TaxInvoiceJobsPage />} />
+        <Route path="tax-invoice-jobs" element={<JobsPage key="tax-invoice" taxInvoiceDone />} />
         <Route path="quotations" element={<QuotationsPage />} />
         <Route path="clients" element={<ClientsPage />} />
         <Route path="inventory" element={<InventoryPage />} />
