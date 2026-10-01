@@ -407,7 +407,7 @@ const STEP_LABELS = [
   "Financial & Delivery",
 ];
 
-function Stepper({ current }: { current: number }) {
+function Stepper({ current, onStepClick }: { current: number; onStepClick?: (step: number) => void }) {
   return (
     <div style={{ display: "flex", alignItems: "center", marginBottom: 32 }}>
       {STEP_LABELS.map((label, i) => {
@@ -418,7 +418,11 @@ function Stepper({ current }: { current: number }) {
         const textColor = isCompleted ? "#2f9e44" : isActive ? "#3b5bdb" : "#868e96";
         return (
           <div key={i} style={{ display: "flex", alignItems: "center", flex: i < STEP_LABELS.length - 1 ? 1 : "none" }}>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 60 }}>
+            <div
+              onClick={() => onStepClick?.(stepNum)}
+              title={`Go to ${label}`}
+              style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 60, cursor: onStepClick ? "pointer" : "default" }}
+            >
               <div style={{
                 width: 32, height: 32, borderRadius: "50%",
                 background: circleColor,
@@ -523,12 +527,15 @@ function JobForm({ initial, initialPapers, clients, machines, plateSources, onCr
     if (s === 1) {
       const today = new Date().toISOString().slice(0, 10);
       const dueDate = (form.due_date as string).trim();
+      // An existing job may already carry a past due date; only a changed date has to be today or later
+      const initialDue = ((initial?.due_date as string | undefined) ?? "").slice(0, 10);
+      const dueOk = dueDate >= today || (!!initial?.id && dueDate === initialDue);
       return (
         (form.client_id as string).trim() !== "" &&
         (form.job_type as string).trim() !== "" &&
         (form.quantity as string).trim() !== "" &&
         dueDate !== "" &&
-        dueDate >= today
+        dueOk
       );
     }
     if (s === 2) {
@@ -537,20 +544,33 @@ function JobForm({ initial, initialPapers, clients, machines, plateSources, onCr
     return true;
   }
 
-  async function handleNext() {
-    if (!validateStep(step)) {
-      setStepError(true);
-      return;
-    }
-    setStepError(false);
-    // Save as draft on every Next
-    if (!draftJobId) {
-      const id = await onCreateDraft(form, papers);
-      setDraftJobId(id);
+  async function goToStep(target: number) {
+    if (target === step || target < 1 || target > 6) return;
+    if (target > step) {
+      // Moving forward needs every step on the way to be valid
+      for (let s = step; s < target; s++) {
+        if (!validateStep(s)) {
+          setStep(s);
+          setStepError(true);
+          return;
+        }
+      }
+      setStepError(false);
+      // Save as draft whenever moving forward
+      if (!draftJobId) {
+        const id = await onCreateDraft(form, papers);
+        setDraftJobId(id);
+      } else {
+        await onUpdateDraft(draftJobId, form, papers);
+      }
     } else {
-      await onUpdateDraft(draftJobId, form, papers);
+      setStepError(false);
     }
-    if (step < 6) setStep(s => s + 1);
+    setStep(target);
+  }
+
+  function handleNext() {
+    return goToStep(step + 1);
   }
 
   function handlePrev() {
@@ -996,7 +1016,7 @@ function JobForm({ initial, initialPapers, clients, machines, plateSources, onCr
         </div>
       )}
 
-      <Stepper current={step} />
+      <Stepper current={step} onStepClick={goToStep} />
 
       <div style={{ minHeight: 260, padding: "4px 0 24px" }}>
         {stepContent[step]}

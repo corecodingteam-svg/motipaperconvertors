@@ -281,6 +281,17 @@ class _JobFormScreenState extends State<JobFormScreen> {
     }
   }
 
+  void _goToStep(int target) {
+    if (target == _step || target < 0 || target > 5) return;
+    // Moving forward needs the current step to be valid; going back is always allowed
+    if (target > _step && !_validateCurrentStep()) {
+      setState(() => _stepError = true);
+      return;
+    }
+    setState(() { _stepError = false; _step = target; });
+    _pageCtrl.animateToPage(target, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+  }
+
   void _back() {
     if (_step > 0) {
       _pageCtrl.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
@@ -324,7 +335,7 @@ class _JobFormScreenState extends State<JobFormScreen> {
       body: _loadingMeta
           ? const Center(child: CircularProgressIndicator())
           : Column(children: [
-              _StepBar(current: _step, steps: steps),
+              _StepBar(current: _step, steps: steps, onTap: _goToStep),
               if (_error != null)
                 Container(color: AppColors.errorLight, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Row(children: [
@@ -372,7 +383,8 @@ class _JobFormScreenState extends State<JobFormScreen> {
 class _StepBar extends StatelessWidget {
   final int current;
   final List<String> steps;
-  const _StepBar({required this.current, required this.steps});
+  final ValueChanged<int> onTap;
+  const _StepBar({required this.current, required this.steps, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -386,13 +398,16 @@ class _StepBar extends StatelessWidget {
           final active = i == current;
           final color = done || active ? AppColors.primary : AppColors.border;
           return Expanded(child: Row(children: [
-            Container(
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => onTap(i),
+              child: Container(
               width: 22, height: 22,
               decoration: BoxDecoration(color: done ? AppColors.primary : active ? AppColors.primaryLight : AppColors.borderLight, border: Border.all(color: color, width: 1.5), shape: BoxShape.circle),
               child: Center(child: done
                   ? const Icon(Icons.check, size: 12, color: Colors.white)
                   : Text('${i + 1}', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: active ? AppColors.primary : AppColors.textMuted))),
-            ),
+            )),
             if (i < steps.length - 1)
               Expanded(child: Container(height: 2, color: done ? AppColors.primary : AppColors.border, margin: const EdgeInsets.symmetric(horizontal: 2))),
           ]));
