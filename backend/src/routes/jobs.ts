@@ -194,7 +194,13 @@ router.get("/:id", requirePermission("jobs.view"), async (req, res) => {
     computed_cost: p.cost_per_unit != null ? Number(p.sheet_count) * Number(p.cost_per_unit) : null,
   }));
 
-  res.json({ ...job, statusHistory, papers });
+  const inks = await db("job_inks")
+    .where({ job_id: job.id })
+    .leftJoin("inventory_items", "job_inks.inventory_item_id", "inventory_items.id")
+    .select("job_inks.*", "inventory_items.name as ink_name", "inventory_items.unit", "inventory_items.category")
+    .orderBy("job_inks.created_at", "asc");
+
+  res.json({ ...job, statusHistory, papers, inks });
 });
 
 const CreateJobSchema = z.object({
@@ -268,6 +274,10 @@ const CreateJobSchema = z.object({
     paperStockId: z.string().uuid(),
     sheetCount: z.number().int().positive(),
     paperCost: z.number().optional(),
+  })).optional(),
+  inks: z.array(z.object({
+    inventoryItemId: z.string().uuid(),
+    quantity: z.number().positive(),
   })).optional(),
 });
 
@@ -389,6 +399,25 @@ router.post("/", requirePermission("jobs.create"), async (req, res) => {
       }
     }
 
+    // Insert job_inks and auto-deduct from inventory
+    const validInks = (data.inks ?? []).filter(i => i.inventoryItemId && i.quantity > 0);
+    if (validInks.length > 0) {
+      await trx("job_inks").insert(
+        validInks.map(i => ({ job_id: inserted.id, inventory_item_id: i.inventoryItemId, quantity: i.quantity }))
+      );
+      for (const i of validInks) {
+        await trx("inventory_transactions").insert({
+          tenant_id: tenantId, inventory_item_id: i.inventoryItemId,
+          job_id: inserted.id, performed_by: req.user.id,
+          type: "out", quantity: i.quantity,
+          notes: `Auto-deducted for Job #${jobNumber}: ${data.title}`,
+        });
+        await trx("inventory_items")
+          .where({ id: i.inventoryItemId, tenant_id: tenantId })
+          .decrement("quantity", i.quantity);
+      }
+    }
+
     return inserted;
   });
 
@@ -471,6 +500,38 @@ router.patch("/:id", requirePermission("jobs.edit"), async (req, res) => {
             notes: `Auto-deducted for Job #${existing.job_number}: ${existing.title} (updated)`,
           });
           await trx("paper_stock").where({ id: p.paperStockId, tenant_id: tenantId }).decrement("quantity", p.sheetCount);
+        }
+      }
+    }
+
+    // If inks array provided, replace all job_inks and re-sync inventory (same approach as papers)
+    if (req.body.inks !== undefined) {
+      const newInks: { inventoryItemId: string; quantity: number }[] = (req.body.inks ?? []).filter((i: { inventoryItemId: string; quantity: number }) => i.inventoryItemId && Number(i.quantity) > 0);
+
+      const oldInks = await trx("job_inks").where({ job_id: req.params.id });
+      for (const oi of oldInks) {
+        await trx("inventory_transactions").insert({
+          tenant_id: tenantId, inventory_item_id: oi.inventory_item_id,
+          job_id: req.params.id, performed_by: req.user.id,
+          type: "in", quantity: oi.quantity,
+          notes: `Reversal for Job #${existing.job_number} edit`,
+        });
+        await trx("inventory_items").where({ id: oi.inventory_item_id, tenant_id: tenantId }).increment("quantity", oi.quantity);
+      }
+      await trx("job_inks").where({ job_id: req.params.id }).delete();
+
+      if (newInks.length > 0) {
+        await trx("job_inks").insert(
+          newInks.map(i => ({ job_id: req.params.id, inventory_item_id: i.inventoryItemId, quantity: Number(i.quantity) }))
+        );
+        for (const i of newInks) {
+          await trx("inventory_transactions").insert({
+            tenant_id: tenantId, inventory_item_id: i.inventoryItemId,
+            job_id: req.params.id, performed_by: req.user.id,
+            type: "out", quantity: Number(i.quantity),
+            notes: `Auto-deducted for Job #${existing.job_number}: ${existing.title} (updated)`,
+          });
+          await trx("inventory_items").where({ id: i.inventoryItemId, tenant_id: tenantId }).decrement("quantity", Number(i.quantity));
         }
       }
     }

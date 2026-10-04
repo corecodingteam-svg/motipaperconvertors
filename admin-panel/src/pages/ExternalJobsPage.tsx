@@ -1,4 +1,6 @@
 import { toast } from "sonner";
+import InkLinesEditor from "../components/InkLinesEditor.tsx";
+import { parseInks, inksToJson, inkSummary, type JobInk } from "../lib/inks.ts";
 import { scrollToTop } from "../lib/scrollToTop.ts";
 import { fmtDate } from "../lib/fmtDate.ts";
 import TableSkeleton from "../components/TableSkeleton.tsx";
@@ -53,6 +55,7 @@ type Job = {
   advance_amount: number; quotation_ref: string; indent_number: string;
   delivery_quantity: number; challan_number: string; challan_date: string;
   tax_invoice_no: string; invoice_date: string;
+  inks?: JobInk[];
 };
 
 interface Client { id: string; name: string; }
@@ -79,11 +82,13 @@ function boolField(form: FormState, key: string): boolean {
 }
 
 function buildApiPayload(form: FormState, papers: PaperLine[]) {
+  const inks = parseInks(form).filter(i => i.inventoryItemId && i.quantity > 0);
   const num = (k: string) => form[k] !== "" && form[k] !== undefined ? Number(form[k]) : undefined;
   const str = (k: string) => (form[k] as string) || undefined;
   const bool = (k: string) => boolField(form, k);
   return {
     papers,
+    inks,
     clientId: str("client_id"),
     title: (form.job_type as string) || "—",
     jobType: str("job_type"),
@@ -148,11 +153,13 @@ function buildApiPayload(form: FormState, papers: PaperLine[]) {
 }
 
 function buildPatchPayload(form: FormState, papers: PaperLine[]) {
+  const inks = parseInks(form).filter(i => i.inventoryItemId && i.quantity > 0);
   const num = (k: string) => form[k] !== "" && form[k] !== undefined ? Number(form[k]) : undefined;
   const str = (k: string) => (form[k] as string) || undefined;
   const bool = (k: string) => boolField(form, k);
   return {
     papers,
+    inks,
     title: (form.job_type as string) || "—",
     description: str("description"),
     job_type: str("job_type"),
@@ -232,7 +239,7 @@ function initForm(initial?: Partial<Job>): FormState {
       is_lamination: false, lamination_type: "", is_folding: false, is_gumming: false,
       post_print_date: "", binding_operator: "", packing_operator: "",
       advance_amount: "", quotation_ref: "", indent_number: "",
-      delivery_quantity: "", challan_number: "", challan_date: "", tax_invoice_no: "", invoice_date: "",
+      delivery_quantity: "", challan_number: "", challan_date: "", tax_invoice_no: "", invoice_date: "", inks_json: "[]",
       print_operator_id: "", binding_operator_id: "", packing_operator_id: "", qc_operator_id: "", designer_id: "",
     };
   }
@@ -293,6 +300,7 @@ function initForm(initial?: Partial<Job>): FormState {
     challan_number: initial.challan_number ?? "",
     challan_date: initial.challan_date ? initial.challan_date.slice(0, 10) : "",
     tax_invoice_no: initial.tax_invoice_no ?? "",
+    inks_json: (initial as Record<string, unknown>).inks_json as string ?? "[]",
     invoice_date: initial.invoice_date ? initial.invoice_date.slice(0, 10) : "",
     print_operator_id: (initial as Record<string, unknown>).print_operator_id as string ?? "",
     binding_operator_id: (initial as Record<string, unknown>).binding_operator_id as string ?? "",
@@ -814,6 +822,9 @@ function JobForm({ initial, initialPapers, clients, machines, plateSources, onCr
             <input style={inputStyle} type="date" value={form.print_date as string} onChange={set("print_date")} />
           </label>
         </div>
+        <div style={{ marginTop: 24 }}>
+          <InkLinesEditor inks={parseInks(form)} onChange={inks => setVal("inks_json", JSON.stringify(inks))} />
+        </div>
       </div>
     ),
 
@@ -1072,7 +1083,7 @@ function EditingJobFormWrapper({ job, clients, machines, plateSources, isSaving,
   onPublish: (id: string, form: FormState, papers: PaperLine[]) => Promise<void>;
   onCancel: () => void;
 }) {
-  const { data: jobDetail, isLoading } = useQuery<{ papers: { paper_stock_id: string; sheet_count: number }[] }>({
+  const { data: jobDetail, isLoading } = useQuery<{ inks?: JobInk[]; papers: { paper_stock_id: string; sheet_count: number }[] }>({
     queryKey: ["job-detail", job.id],
     queryFn: () => api.get(`/admin/jobs/${job.id}`).then(r => r.data),
   });
@@ -1083,7 +1094,7 @@ function EditingJobFormWrapper({ job, clients, machines, plateSources, isSaving,
 
   return (
     <JobForm
-      initial={job}
+      initial={{ ...job, inks_json: inksToJson(jobDetail?.inks) } as Partial<Job>}
       initialPapers={initialPapers}
       clients={clients}
       machines={machines}
@@ -1195,6 +1206,7 @@ function JobDetailModal({ job, clients, machines, staffUsers, onClose, onEdit, o
           {row("Print Colors", job.print_colors)}
           {row("Print Operator", printOpName)}
           {row("Print Date", fmtDate(job.print_date))}
+          {row("Ink Used", inkSummary(job.inks))}
 
           {sectionTitle("Post-Print")}
           {row("Numbering", bool(job.is_numbering))}

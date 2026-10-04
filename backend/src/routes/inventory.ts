@@ -131,7 +131,8 @@ const InventoryItemSchema = z.object({
 });
 
 router.get("/items", requirePermission("inventory.view"), async (req, res) => {
-  const params = parseListParams(req, { sortBy: "name" });
+  // Higher cap: job forms fetch the full ink list in one call
+  const params = parseListParams(req, { sortBy: "name", maxLimit: 5000 });
   const tenantId = req.user.tenantId!;
   const { category, isLow } = req.query as Record<string, string>;
 

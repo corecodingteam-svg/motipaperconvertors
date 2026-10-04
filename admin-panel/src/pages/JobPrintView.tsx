@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { fmtDate, fmtDateTime } from "../lib/fmtDate.ts";
+import { inkSummary, type JobInk } from "../lib/inks.ts";
 
 interface JobPaper { paper_name?: string; paper_source?: string; gsm?: number; size?: string; sheet_count: number; unit?: string; paper_cost?: number; computed_cost?: number; }
 
@@ -8,6 +9,7 @@ interface Job {
   status: string; quantity: number; due_date: string; order_type: string; job_type: string; description?: string;
   machine_name?: string;
   papers?: JobPaper[];
+  inks?: JobInk[];
   paper_type: string; paper_gsm: number; sheet_size: string; sheet_count: number;
   composing_date: string; composing_amount: number; plate_cost: number; die_cost: number;
   plate_source: string; approved_rate: number; hela_cost: number; other_cost: number;
@@ -177,6 +179,7 @@ export default function JobPrintView({ job, template, onClose }: { job: Job; tem
             {cell("Print Colors", job.print_colors)}
             {cell("Print Operator", job.print_operator_name || job.print_operator)}
             {cell("Print Date", fmtDate(job.print_date))}
+            {cell("Ink Used", inkSummary(job.inks))}
 
             {section("Post-Print Process")}
             {cell("Finishing", finishingItems || "None")}
