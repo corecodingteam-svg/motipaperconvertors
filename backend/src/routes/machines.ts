@@ -21,6 +21,21 @@ const MachineSchema = z.object({
   notes: z.string().optional(),
 });
 
+// The API takes camelCase; the table columns are snake_case (spreading the body straight into
+// the update made Postgres fail on unknown columns like "maxColors", so every edit errored)
+function machineUpdates(d: Partial<z.infer<typeof MachineSchema>>) {
+  const u: Record<string, unknown> = { updated_at: new Date() };
+  if (d.name !== undefined) u.name = d.name;
+  if (d.type !== undefined) u.type = d.type || null;
+  if (d.model !== undefined) u.model = d.model || null;
+  if (d.maxSheetWidthMm !== undefined) u.max_sheet_width_mm = d.maxSheetWidthMm;
+  if (d.maxSheetHeightMm !== undefined) u.max_sheet_height_mm = d.maxSheetHeightMm;
+  if (d.maxColors !== undefined) u.max_colors = d.maxColors;
+  if (d.status !== undefined) u.status = d.status;
+  if (d.notes !== undefined) u.notes = d.notes || null;
+  return u;
+}
+
 // GET /machines?page&limit&search&sortBy&sortDir&status&type
 router.get("/", requirePermission("settings.view"), async (req, res) => {
   // Newest first, so a machine you just added is at the top of the list
@@ -58,7 +73,7 @@ router.patch("/:id", requirePermission("settings.edit"), async (req, res) => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.flatten() }); return; }
   const [updated] = await db("machines")
     .where({ id: req.params.id, tenant_id: req.user.tenantId! })
-    .update({ ...parsed.data, updated_at: new Date() })
+    .update(machineUpdates(parsed.data))
     .returning("*");
   if (!updated) { res.status(404).json({ error: "Machine not found" }); return; }
   res.json(updated);
