@@ -29,6 +29,14 @@ function SettingsList({ label, queryKey, endpoint }: { label: string; queryKey: 
     onError: () => toast.error("Failed to add item"),
   });
 
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const rename = useMutation({
+    mutationFn: () => api.patch(`${endpoint}/${editId}`, { name: editName.trim() }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: [queryKey] }); qc.invalidateQueries({ queryKey: ["jobs"] }); setEditId(null); toast.success("Item updated"); },
+    onError: (e: unknown) => toast.error((e as { response?: { status?: number } })?.response?.status === 409 ? "An item with this name already exists" : "Failed to update item"),
+  });
+
   const remove = useMutation({
     mutationFn: (id: string) => api.delete(`${endpoint}/${id}`),
     onSuccess: () => { qc.invalidateQueries({ queryKey: [queryKey] }); toast.success("Item deleted"); },
@@ -82,7 +90,7 @@ function SettingsList({ label, queryKey, endpoint }: { label: string; queryKey: 
             <th style={{ ...th, cursor: "pointer", userSelect: "none" }} onClick={() => setSortDir(d => d === "asc" ? "desc" : "asc")}>
               {label} {sortDir === "asc" ? "↑" : "↓"}
             </th>
-            <th style={{ ...th, width: 60 }} />
+            <th style={{ ...th, width: 120 }} />
           </tr>
         </thead>
         <tbody>
@@ -91,8 +99,30 @@ function SettingsList({ label, queryKey, endpoint }: { label: string; queryKey: 
           )}
           {paginated.map(item => (
             <tr key={item.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
-              <td style={td}>{item.name}</td>
               <td style={td}>
+                {editId === item.id ? (
+                  <input
+                    autoFocus
+                    style={{ ...inputStyle, width: "100%", maxWidth: 320 }}
+                    value={editName}
+                    onChange={e => setEditName(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter" && editName.trim()) rename.mutate(); if (e.key === "Escape") setEditId(null); }}
+                  />
+                ) : item.name}
+              </td>
+              <td style={{ ...td, whiteSpace: "nowrap" }}>
+                {editId === item.id ? (
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button onClick={() => rename.mutate()} disabled={!editName.trim() || rename.isPending} style={{ padding: "3px 10px", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, background: "#3b5bdb", color: "#fff" }}>Save</button>
+                    <button onClick={() => setEditId(null)} style={{ padding: "3px 10px", border: "1px solid #ddd", borderRadius: 6, cursor: "pointer", fontSize: 13, background: "#fff" }}>Cancel</button>
+                  </div>
+                ) : (
+                <div style={{ display: "flex", gap: 6 }}>
+                <button
+                  onClick={() => { setEditId(item.id); setEditName(item.name); }}
+                  title="Edit"
+                  style={{ padding: "3px 10px", border: "1px solid #ddd", borderRadius: 6, cursor: "pointer", fontSize: 13, background: "#fff" }}
+                >Edit</button>
                 <button
                   onClick={() => remove.mutate(item.id)}
                   disabled={remove.isPending}
@@ -100,6 +130,8 @@ function SettingsList({ label, queryKey, endpoint }: { label: string; queryKey: 
                 >
                   &times;
                 </button>
+                </div>
+                )}
               </td>
             </tr>
           ))}

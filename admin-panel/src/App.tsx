@@ -38,6 +38,7 @@ export default function App() {
         <Route index element={<DashboardPage />} />
         <Route path="jobs" element={<JobsPage />} />
         <Route path="external-jobs" element={<ExternalJobsPage />} />
+        <Route path="deleted-jobs" element={<JobsPage key="deleted" deletedView />} />
         <Route path="tax-invoice-jobs" element={<JobsPage key="tax-invoice" taxInvoiceDone />} />
         <Route path="quotations" element={<QuotationsPage />} />
         <Route path="clients" element={<ClientsPage />} />

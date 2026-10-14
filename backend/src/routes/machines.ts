@@ -75,12 +75,14 @@ router.get("/:id/queue", requirePermission("production.view"), async (req, res) 
 
   const base = db("job_cards")
     .where({ machine_id: req.params.id, tenant_id: tenantId })
+    .whereNull("job_cards.deleted_at")
     .whereNotIn("status", ["delivered", "cancelled"])
     .leftJoin("clients", "job_cards.client_id", "clients.id")
     .select("job_cards.*", "clients.name as client_name");
 
   const countQ = db("job_cards")
     .where({ machine_id: req.params.id, tenant_id: tenantId })
+    .whereNull("job_cards.deleted_at")
     .whereNotIn("status", ["delivered", "cancelled"]);
 
   res.json(await paginate(base, countQ, params, ["due_date", "job_number", "status", "created_at"], "job_cards"));

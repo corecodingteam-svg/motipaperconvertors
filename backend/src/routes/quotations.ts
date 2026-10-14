@@ -75,7 +75,7 @@ router.post("/", requirePermission("quotation.create"), async (req, res) => {
   const tenantId = req.user.tenantId!;
   const data = parsed.data;
 
-  const job = await db("job_cards").where({ id: data.jobId, tenant_id: tenantId }).first();
+  const job = await db("job_cards").where({ id: data.jobId, tenant_id: tenantId }).whereNull("deleted_at").first();
   if (!job) { res.status(404).json({ error: "Job not found" }); return; }
 
   const { subTotal, gstAmount, total } = calcTotals(data);

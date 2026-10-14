@@ -56,6 +56,7 @@ type Job = {
   delivery_quantity: number; challan_number: string; challan_date: string;
   tax_invoice_no: string; invoice_date: string;
   inks?: JobInk[];
+  deleted_at?: string | null; deleted_by_name?: string | null;
   papers?: { paper_name?: string; gsm?: number; size?: string; sheet_count: number; unit?: string; paper_cost?: number; computed_cost?: number; paper_stock_id?: string; paper_source?: string }[];
 };
 
@@ -1123,7 +1124,8 @@ function EditingJobFormWrapper({ job, clients, machines, plateSources, isSaving,
 
 // ─── JobDetailModal ───────────────────────────────────────────────────────────
 
-function JobDetailModal({ job, clients, machines, staffUsers, onClose, onEdit, onPrint }: {
+function JobDetailModal({ job, clients, machines, staffUsers, onClose, onEdit, onPrint, readOnly = false }: {
+  readOnly?: boolean;
   job: Job;
   clients: Client[];
   machines: Machine[];
@@ -1177,7 +1179,7 @@ function JobDetailModal({ job, clients, machines, staffUsers, onClose, onEdit, o
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={onPrint} style={{ padding: "8px 14px", border: "1px solid #ddd", borderRadius: 7, cursor: "pointer", background: "#fff", fontSize: 13 }}>🖨️ Print</button>
-            <button onClick={onEdit} style={{ padding: "8px 18px", background: "#3b5bdb", color: "#fff", border: "none", borderRadius: 7, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>Edit</button>
+            {!readOnly && <button onClick={onEdit} style={{ padding: "8px 18px", background: "#3b5bdb", color: "#fff", border: "none", borderRadius: 7, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>Edit</button>}
             <button onClick={onClose} style={{ padding: "8px 14px", border: "1px solid #ddd", borderRadius: 7, cursor: "pointer", background: "#fff", fontSize: 13 }}>Close</button>
           </div>
         </div>
@@ -1282,9 +1284,10 @@ function JobDetailModal({ job, clients, machines, staffUsers, onClose, onEdit, o
 }
 
 // taxInvoiceDone = the "Tax Invoice Cards" view: same list, but cards whose tax invoice is filled (internal + external)
-export default function JobsPage({ taxInvoiceDone = false }: { taxInvoiceDone?: boolean }) {
-  const listFilter = taxInvoiceDone ? { taxInvoice: "done" } : { order_type: "in_house", taxInvoice: "pending" };
-  const extraCols = taxInvoiceDone ? 2 : 0;
+// deletedView = the "Deleted Job Cards" view: soft-deleted cards (internal + external), read-only
+export default function JobsPage({ taxInvoiceDone = false, deletedView = false }: { taxInvoiceDone?: boolean; deletedView?: boolean }) {
+  const listFilter = deletedView ? { deleted: "1" } : taxInvoiceDone ? { taxInvoice: "done" } : { order_type: "in_house", taxInvoice: "pending" };
+  const extraCols = taxInvoiceDone || deletedView ? 2 : 0;
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Job | null>(null);
   const [viewJob, setViewJob] = useState<Job | null>(null);
@@ -1314,7 +1317,7 @@ export default function JobsPage({ taxInvoiceDone = false }: { taxInvoiceDone?: 
         due_date: j.due_date ? j.due_date.slice(0, 10) : "",
         created_at: "",
       }));
-      exportToCsv(`${taxInvoiceDone ? "tax-invoice-jobs" : "jobs"}-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+      exportToCsv(`${deletedView ? "deleted-jobs" : taxInvoiceDone ? "tax-invoice-jobs" : "jobs"}-${new Date().toISOString().slice(0, 10)}.csv`, rows);
     } finally {
       setExporting(false);
     }
@@ -1322,7 +1325,7 @@ export default function JobsPage({ taxInvoiceDone = false }: { taxInvoiceDone?: 
   const [list, actions] = useListState({ sortBy: "created_at", filters: {} });
 
   const { data, isLoading } = useQuery<PagedResult<Job>>({
-    queryKey: ["jobs", taxInvoiceDone ? "tax-invoice" : "main", actions.toParams()],
+    queryKey: ["jobs", deletedView ? "deleted" : taxInvoiceDone ? "tax-invoice" : "main", actions.toParams()],
     queryFn: () => api.get("/admin/jobs", { params: { ...actions.toParams(), ...listFilter } }).then((r) => r.data),
     placeholderData: keepPreviousData,
   });
@@ -1433,9 +1436,10 @@ export default function JobsPage({ taxInvoiceDone = false }: { taxInvoiceDone?: 
           onClose={() => setViewJob(null)}
           onEdit={() => { setEditing(viewJob); setViewJob(null); scrollToTop(); }}
           onPrint={() => { api.get(`/admin/jobs/${viewJob.id}`).then(r => setPrintJob(r.data)); setViewJob(null); }}
+          readOnly={deletedView}
         />
       )}
-      <h1 style={{ marginBottom: 20 }}>{taxInvoiceDone ? "Tax Invoice Cards" : "Job Cards"}</h1>
+      <h1 style={{ marginBottom: 20 }}>{deletedView ? "Deleted Job Cards" : taxInvoiceDone ? "Tax Invoice Cards" : "Job Cards"}</h1>
       {showForm && (
         <JobForm
           clients={clients}
@@ -1486,7 +1490,7 @@ export default function JobsPage({ taxInvoiceDone = false }: { taxInvoiceDone?: 
         search={list.search} onSearch={actions.setSearch} placeholder="Search job no, title, client..."
         activeFilters={list.filters} onFilter={actions.setFilter} onReset={actions.resetFilters}
         filters={[{ key: "status", label: "Status", options: STATUS_OPTIONS }]}
-        rightSlot={<div style={{ display: "flex", gap: 8 }}><PrintListButton /><button onClick={handleExport} disabled={exporting} style={{ padding: "8px 14px", border: "1px solid #e5e7eb", borderRadius: 7, cursor: "pointer", background: "#fff", fontSize: 13, fontWeight: 500, color: "#374151", display: "flex", alignItems: "center", gap: 6 }}>{exporting ? "Exporting…" : "⬇ Export Jobs"}</button>{canCreate && !taxInvoiceDone && <button onClick={() => { setShowForm(true); scrollToTop(); }} style={{ padding: "8px 18px", background: "#3b5bdb", color: "#fff", border: "none", borderRadius: 7, cursor: "pointer", fontWeight: 600 }}>+ New Job</button>}</div>}
+        rightSlot={<div style={{ display: "flex", gap: 8 }}><PrintListButton /><button onClick={handleExport} disabled={exporting} style={{ padding: "8px 14px", border: "1px solid #e5e7eb", borderRadius: 7, cursor: "pointer", background: "#fff", fontSize: 13, fontWeight: 500, color: "#374151", display: "flex", alignItems: "center", gap: 6 }}>{exporting ? "Exporting…" : "⬇ Export Jobs"}</button>{canCreate && !taxInvoiceDone && !deletedView && <button onClick={() => { setShowForm(true); scrollToTop(); }} style={{ padding: "8px 18px", background: "#3b5bdb", color: "#fff", border: "none", borderRadius: 7, cursor: "pointer", fontWeight: 600 }}>+ New Job</button>}</div>}
       />
       <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
         <label style={{ fontSize: 13, color: "#555", display: "flex", alignItems: "center", gap: 6 }}>
@@ -1503,7 +1507,7 @@ export default function JobsPage({ taxInvoiceDone = false }: { taxInvoiceDone?: 
               {col("#", "job_number")}
               {col("Job Title", "job_type")}
               <th style={th}>Company</th>
-              {taxInvoiceDone && <th style={th}>Type</th>}
+              {(taxInvoiceDone || deletedView) && <th style={th}>Type</th>}
               {col("Qty", "quantity")}
               {col("Status", "status")}
               {col("Created", "created_at")}
@@ -1511,6 +1515,7 @@ export default function JobsPage({ taxInvoiceDone = false }: { taxInvoiceDone?: 
               <th style={th}>Advance</th>
               {col("Quoted", "quoted_price")}
               {taxInvoiceDone && col("Tax Invoice", "invoice_date")}
+              {deletedView && col("Deleted", "deleted_at")}
               <th style={th} />
             </tr>
           </thead>
@@ -1522,10 +1527,10 @@ export default function JobsPage({ taxInvoiceDone = false }: { taxInvoiceDone?: 
                 <td style={{ ...td, color: STATUS_COLOR[j.status] ?? "#868e96", fontWeight: 700 }}>{j.job_number}</td>
                 <td style={{ ...td, fontWeight: 600, color: "#111827" }}>{j.job_type ?? "—"}</td>
                 <td style={{ ...td, color: "#374151" }}>{j.client_company_name || j.client_name || "—"}</td>
-                {taxInvoiceDone && <td style={{ ...td, color: "#374151" }}>{j.order_type === "external" ? "External" : "Internal"}</td>}
+                {(taxInvoiceDone || deletedView) && <td style={{ ...td, color: "#374151" }}>{j.order_type === "external" ? "External" : "Internal"}</td>}
                 <td style={{ ...td, color: "#374151" }}>{j.quantity ?? "—"}</td>
                 <td style={td} onClick={e => e.stopPropagation()}>
-                  {currentRole === "operator" || currentRole === "staff" ? (
+                  {currentRole === "operator" || currentRole === "staff" || deletedView ? (
                     <span style={{ padding: "2px 9px", borderRadius: 10, fontSize: 12, fontWeight: 600, background: (STATUS_COLOR[j.status] ?? "#868e96") + "22", color: STATUS_COLOR[j.status] ?? "#868e96" }}>
                       {statusLabel(j.status)}
                     </span>
@@ -1543,30 +1548,31 @@ export default function JobsPage({ taxInvoiceDone = false }: { taxInvoiceDone?: 
                 <td style={{ ...td, color: "#374151" }}>{fmtDate(j.due_date)}</td>
                 <td style={{ ...td, color: "#1f2937", fontWeight: 500 }}>{j.advance_amount != null ? "Rs." + Number(j.advance_amount).toLocaleString("en-IN") : "—"}</td>
                 <td style={{ ...td, color: "#1f2937", fontWeight: 600 }}>{j.quoted_price ? "Rs." + Number(j.quoted_price).toLocaleString("en-IN") : "—"}</td>
+                {deletedView && <td style={{ ...td, color: "#c92a2a" }}>{fmtDate(j.deleted_at)}{j.deleted_by_name ? <span style={{ color: "#868e96" }}> · {j.deleted_by_name}</span> : null}</td>}
                 {taxInvoiceDone && <td style={{ ...td, color: "#1f2937" }}>{j.tax_invoice_no}{j.invoice_date ? <span style={{ color: "#868e96" }}> · {fmtDate(j.invoice_date)}</span> : null}</td>}
                 <td style={td} onClick={e => e.stopPropagation()}>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     {/* ── Print Operator ── */}
-                    {j.print_operator_id === currentUserId && j.status === "approval" && (
+                    {!deletedView && j.print_operator_id === currentUserId && j.status === "approval" && (
                       !startedJobs.has(j.id + "_print")
                         ? <button onClick={() => markStarted(j.id + "_print", "Printing")} style={{ padding: "4px 12px", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600, background: "#2f9e44", color: "#fff" }}>▶ Start Printing</button>
                         : <button onClick={() => changeStatus.mutate({ id: j.id, status: "print" })} style={{ padding: "4px 12px", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600, background: "#1864ab", color: "#fff" }}>🖨 Printing...</button>
                     )}
-                    {j.print_operator_id === currentUserId && j.status === "print" && (
+                    {!deletedView && j.print_operator_id === currentUserId && j.status === "print" && (
                       !startedJobs.has(j.id + "_printdone")
                         ? <button onClick={() => markStarted(j.id + "_printdone", "Printing completed")} style={{ padding: "4px 12px", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600, background: "#e67700", color: "#fff" }}>✓ Printing Done</button>
                         : <button onClick={() => changeStatus.mutate({ id: j.id, status: "finishing" })} style={{ padding: "4px 12px", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600, background: "#0c8599", color: "#fff" }}>→ Send to Binding</button>
                     )}
 
                     {/* ── Binding Operator ── */}
-                    {j.binding_operator_id === currentUserId && j.status === "finishing" && (
+                    {!deletedView && j.binding_operator_id === currentUserId && j.status === "finishing" && (
                       !startedJobs.has(j.id + "_binding")
                         ? <button onClick={() => markStarted(j.id + "_binding", "Binding started")} style={{ padding: "4px 12px", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600, background: "#7048e8", color: "#fff" }}>▶ Binding Started</button>
                         : <button onClick={() => changeStatus.mutate({ id: j.id, status: "qc" })} style={{ padding: "4px 12px", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600, background: "#0c8599", color: "#fff" }}>✓ Binding Done</button>
                     )}
 
                     {/* ── Packing Operator ── */}
-                    {j.packing_operator_id === currentUserId && j.status === "qc" && (
+                    {!deletedView && j.packing_operator_id === currentUserId && j.status === "qc" && (
                       !startedJobs.has(j.id + "_packing")
                         ? <button onClick={() => markStarted(j.id + "_packing", "Packing started")} style={{ padding: "4px 12px", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600, background: "#c2410c", color: "#fff" }}>▶ Packing Started</button>
                         : <button onClick={() => changeStatus.mutate({ id: j.id, status: "ready" })} style={{ padding: "4px 12px", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600, background: "#2b8a3e", color: "#fff" }}>✓ Packing Done → Ready</button>
@@ -1574,8 +1580,8 @@ export default function JobsPage({ taxInvoiceDone = false }: { taxInvoiceDone?: 
                     {currentRole !== "operator" && currentRole !== "staff" && (
                       <>
                         <IconButton icon="🖨️" tooltip="Print Job Card" onClick={() => api.get(`/admin/jobs/${j.id}`).then(r => setPrintJob(r.data))} />
-                        {canEdit && <IconButton icon="✏️" tooltip="Edit" onClick={() => { setEditing(j); scrollToTop(); }} />}
-                        {canDelete && <IconButton icon="🗑️" tooltip="Delete" onClick={() => setDeleteConfirm(j.id)} danger />}
+                        {canEdit && !deletedView && <IconButton icon="✏️" tooltip="Edit" onClick={() => { setEditing(j); scrollToTop(); }} />}
+                        {canDelete && !deletedView && <IconButton icon="🗑️" tooltip="Delete" onClick={() => setDeleteConfirm(j.id)} danger />}
                       </>
                     )}
                   </div>

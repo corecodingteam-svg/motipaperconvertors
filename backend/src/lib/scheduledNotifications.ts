@@ -33,6 +33,7 @@ async function runDailyChecks(): Promise<void> {
 async function checkDeliveriesDueToday(): Promise<void> {
   const today = new Date().toISOString().slice(0, 10);
   const jobs = await db("job_cards")
+    .whereNull("deleted_at")
     .whereIn("status", ["ready", "qc"])
     .where("due_date", today)
     .select("id", "tenant_id", "job_number", "title");

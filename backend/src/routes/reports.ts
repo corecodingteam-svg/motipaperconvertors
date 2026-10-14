@@ -14,6 +14,7 @@ router.get("/job-profitability", requirePermission("reports.view_financial"), as
 
   let query = db("job_cards")
     .where({ "job_cards.tenant_id": tenantId })
+    .whereNull("job_cards.deleted_at")
     .leftJoin("clients", "job_cards.client_id", "clients.id")
     .select(
       "job_cards.id",
@@ -93,6 +94,7 @@ router.get("/machine-utilization", requirePermission("production.view"), async (
 
   let query = db("job_cards")
     .where({ "job_cards.tenant_id": tenantId })
+    .whereNull("job_cards.deleted_at")
     .whereNotNull("job_cards.machine_id")
     .leftJoin("machines", "job_cards.machine_id", "machines.id")
     .groupBy("machines.id", "machines.name")
@@ -150,6 +152,7 @@ router.get("/staff-output", requirePermission("production.view"), async (req, re
 
   let query = db("job_cards")
     .where({ "job_cards.tenant_id": tenantId })
+    .whereNull("job_cards.deleted_at")
     .whereNotNull("job_cards.assigned_operator_id")
     .leftJoin("users", "job_cards.assigned_operator_id", "users.id")
     .groupBy("users.id", "users.name")
@@ -199,6 +202,7 @@ router.get("/jobs-by-status", requirePermission("jobs.view"), async (req, res) =
 
   let query = db("job_cards")
     .where({ tenant_id: tenantId })
+    .whereNull("job_cards.deleted_at")
     .groupBy("status")
     .select(
       "status",
@@ -268,7 +272,7 @@ router.get("/monthly-revenue", requirePermission("reports.view_financial"), asyn
 router.get("/summary", requirePermission("jobs.view"), async (req, res) => {
   const tenantId = req.user.tenantId!;
 
-  const [jobStats] = await db("job_cards").where({ tenant_id: tenantId }).select(
+  const [jobStats] = await db("job_cards").where({ tenant_id: tenantId }).whereNull("job_cards.deleted_at").select(
     db.raw("COUNT(*) as total_jobs"),
     db.raw("COUNT(CASE WHEN status NOT IN ('delivered','cancelled') THEN 1 END) as active_jobs"),
     db.raw("COUNT(CASE WHEN status = 'delivered' THEN 1 END) as delivered_jobs"),
@@ -305,6 +309,7 @@ router.get("/client-jobs", requirePermission("jobs.view"), async (req, res) => {
 
   let base = db("job_cards")
     .where({ "job_cards.tenant_id": tenantId, "job_cards.client_id": clientId })
+    .whereNull("job_cards.deleted_at")
     .leftJoin("machines", "job_cards.machine_id", "machines.id")
     .select("job_cards.*", "machines.name as machine_name");
 
@@ -324,7 +329,7 @@ router.get("/client-jobs", requirePermission("jobs.view"), async (req, res) => {
   const jobs = await base.clone().orderBy(sortCol, dir).limit(limitNum).offset(offset);
 
   // Summary stats + breakdown — respect ALL same filters as table
-  let statsBase = db("job_cards").where({ tenant_id: tenantId, client_id: clientId });
+  let statsBase = db("job_cards").where({ tenant_id: tenantId, client_id: clientId }).whereNull("job_cards.deleted_at");
   if (status) statsBase = statsBase.where("status", status);
   if (from)   statsBase = statsBase.where("created_at", ">=", from);
   if (to)     statsBase = statsBase.where("created_at", "<=", to);
@@ -343,6 +348,7 @@ router.get("/client-jobs", requirePermission("jobs.view"), async (req, res) => {
   // Status breakdown — only when no status filter (makes no sense to show breakdown for a single status)
   const statusBreakdown = status ? [] : await db("job_cards")
     .where({ tenant_id: tenantId, client_id: clientId })
+    .whereNull("job_cards.deleted_at")
     .modify(q => { if (from) q.where("created_at", ">=", from); if (to) q.where("created_at", "<=", to); })
     .groupBy("status")
     .select("status", db.raw("COUNT(*) as count"));

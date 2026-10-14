@@ -195,6 +195,39 @@ router.delete("/staff-types/:id", requirePermission("settings.edit"), async (req
   res.json({ ok: true });
 });
 
+// ── Rename (edit) a list item ─────────────────────────────────────────────────
+// Records that stored the old name as plain text are renamed too, so existing data stays in sync.
+const RENAMEABLE: Record<string, { key: string; cascade: { table: string; column: string }[] }> = {
+  "job-types":      { key: "job_type",     cascade: [{ table: "job_cards", column: "job_type" }] },
+  "print-colors":   { key: "print_color",  cascade: [{ table: "job_cards", column: "print_colors" }] },
+  "plate-sources":  { key: "plate_source", cascade: [{ table: "job_cards", column: "plate_source" }] },
+  "binding-types":  { key: "binding_type", cascade: [{ table: "job_cards", column: "binding_type" }] },
+  "staff-types":    { key: "staff_type",   cascade: [{ table: "users", column: "staff_type" }] },
+};
+
+for (const [path, cfg] of Object.entries(RENAMEABLE)) {
+  router.patch(`/${path}/:id`, requirePermission("settings.edit"), async (req, res) => {
+    const parsed = NameSchema.safeParse(req.body);
+    if (!parsed.success) { res.status(400).json({ error: parsed.error.flatten() }); return; }
+    const tenantId = req.user.tenantId!;
+    const name = parsed.data.name.trim();
+    const row = await db("tenant_settings").where({ id: req.params.id, tenant_id: tenantId, key: cfg.key }).first();
+    if (!row) { res.status(404).json({ error: "Item not found" }); return; }
+    const clash = await db("tenant_settings").where({ tenant_id: tenantId, key: cfg.key }).whereRaw("LOWER(value) = LOWER(?)", [name]).whereNot({ id: row.id }).first();
+    if (clash) { res.status(409).json({ error: "An item with this name already exists" }); return; }
+
+    await db.transaction(async (trx) => {
+      await trx("tenant_settings").where({ id: row.id }).update({ value: name });
+      for (const c of cfg.cascade) {
+        await trx(c.table).where({ tenant_id: tenantId, [c.column]: row.value }).update({ [c.column]: name });
+      }
+      // A job's title is built from its job type, so keep it in step
+      if (cfg.key === "job_type") await trx("job_cards").where({ tenant_id: tenantId, title: row.value }).update({ title: name });
+    });
+    res.json({ id: row.id, name, tenant_id: tenantId });
+  });
+}
+
 // ── Print Template ────────────────────────────────────────────────────────────
 
 const PrintTemplateSchema = z.object({

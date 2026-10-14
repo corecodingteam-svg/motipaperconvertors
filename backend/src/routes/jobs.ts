@@ -24,17 +24,20 @@ function applyJobSearch(query: Knex.QueryBuilder, search: string | null): Knex.Q
 const router = Router();
 router.use(requireTenant);
 
-const JOB_SORT_COLS = ["job_number", "title", "status", "due_date", "created_at", "quoted_price", "invoice_date"];
+const JOB_SORT_COLS = ["job_number", "title", "status", "due_date", "created_at", "quoted_price", "invoice_date", "deleted_at"];
 
 // ── GET /jobs ─────────────────────────────────────────────
 // Query params: page, limit, search, sortBy, sortDir, status, clientId, machineId, dueDateFrom, dueDateTo
 router.get("/", requirePermission("jobs.view"), async (req, res) => {
   const params = parseListParams(req, { sortBy: "created_at" });
   const tenantId = req.user.tenantId!;
-  const { status, clientId, machineId, dueDateFrom, dueDateTo, assignedOperatorId, createdFrom, createdTo, order_type, taxInvoice } = req.query as Record<string, string>;
+  const { status, clientId, machineId, dueDateFrom, dueDateTo, assignedOperatorId, createdFrom, createdTo, order_type, taxInvoice, deleted } = req.query as Record<string, string>;
 
+  // deleted=1 → only deleted cards; otherwise deleted cards are never listed
+  const onlyDeleted = deleted === "1";
   let base = db("job_cards")
     .where("job_cards.tenant_id", tenantId)
+    .modify((q) => { if (onlyDeleted) q.whereNotNull("job_cards.deleted_at"); else q.whereNull("job_cards.deleted_at"); })
     .leftJoin("clients", "job_cards.client_id", "clients.id")
     .leftJoin("users as operator", "job_cards.assigned_operator_id", "operator.id")
     .leftJoin("users as print_op", "job_cards.print_operator_id", "print_op.id")
@@ -42,8 +45,10 @@ router.get("/", requirePermission("jobs.view"), async (req, res) => {
     .leftJoin("users as packing_op", "job_cards.packing_operator_id", "packing_op.id")
     .leftJoin("users as qc_op", "job_cards.qc_operator_id", "qc_op.id")
     .leftJoin("users as designer", "job_cards.designer_id", "designer.id")
+    .leftJoin("users as deleter", "job_cards.deleted_by", "deleter.id")
     .select(
       "job_cards.*",
+      "deleter.name as deleted_by_name",
       "clients.name as client_name",
       "clients.company_name as client_company_name",
       "clients.phone as client_phone",
@@ -85,6 +90,7 @@ router.get("/", requirePermission("jobs.view"), async (req, res) => {
 
   let countQ = db("job_cards")
     .where("job_cards.tenant_id", tenantId)
+    .modify((q) => { if (onlyDeleted) q.whereNotNull("job_cards.deleted_at"); else q.whereNull("job_cards.deleted_at"); })
     .leftJoin("clients", "job_cards.client_id", "clients.id");
   if (["staff", "operator"].includes(req.user.role)) countQ = countQ.where("job_cards.status", "!=", "draft").where("job_cards.assigned_operator_id", req.user.id);
   if (status) countQ = countQ.where("job_cards.status", status);
@@ -112,6 +118,7 @@ router.get("/my-assigned", async (req, res) => {
 
   const jobs = await db("job_cards")
     .where("job_cards.tenant_id", tenantId)
+    .whereNull("job_cards.deleted_at")
     .where("job_cards.status", "!=", "draft")
     .where((qb) => {
       qb.where("job_cards.print_operator_id", userId)
@@ -432,7 +439,7 @@ router.post("/", requirePermission("jobs.create"), async (req, res) => {
 // ── PATCH /jobs/:id ───────────────────────────────────────
 router.patch("/:id", requirePermission("jobs.edit"), async (req, res) => {
   const tenantId = req.user.tenantId!;
-  const existing = await db("job_cards").where({ id: req.params.id, tenant_id: tenantId }).first();
+  const existing = await db("job_cards").where({ id: req.params.id, tenant_id: tenantId }).whereNull("deleted_at").first();
   if (!existing) { res.status(404).json({ error: "Job not found" }); return; }
 
   const allowed = ["title", "description", "quantity", "size", "colors_front", "colors_back",
@@ -550,7 +557,7 @@ router.patch("/:id", requirePermission("jobs.edit"), async (req, res) => {
 // ── POST /jobs/:id/note — log a note without changing status ─
 router.post("/:id/note", async (req, res) => {
   const { note } = req.body as { note: string };
-  const job = await db("job_cards").where({ id: req.params.id, tenant_id: req.user.tenantId! }).first();
+  const job = await db("job_cards").where({ id: req.params.id, tenant_id: req.user.tenantId! }).whereNull("deleted_at").first();
   if (!job) { res.status(404).json({ error: "Job not found" }); return; }
   await db("job_status_history").insert({
     job_id: req.params.id,
@@ -566,7 +573,7 @@ router.post("/:id/note", async (req, res) => {
 router.patch("/:id/status", requirePermission("production.update_status"), async (req, res) => {
   const { status, notes } = req.body;
   const tenantId = req.user.tenantId!;
-  const existing = await db("job_cards").where({ id: req.params.id, tenant_id: tenantId }).first();
+  const existing = await db("job_cards").where({ id: req.params.id, tenant_id: tenantId }).whereNull("deleted_at").first();
   if (!existing) { res.status(404).json({ error: "Job not found" }); return; }
 
   const [updated] = await db("job_cards")
@@ -590,7 +597,7 @@ router.patch("/:id/status", requirePermission("production.update_status"), async
 // ── DELETE /jobs/:id ──────────────────────────────────────
 router.delete("/:id", requirePermission("jobs.delete"), async (req, res) => {
   const tenantId = req.user.tenantId!;
-  const existing = await db("job_cards").where({ id: req.params.id, tenant_id: tenantId }).first();
+  const existing = await db("job_cards").where({ id: req.params.id, tenant_id: tenantId }).whereNull("deleted_at").first();
   if (!existing) { res.status(404).json({ error: "Job not found" }); return; }
   // Put the paper and ink this job consumed back into inventory, then delete the card
   await db.transaction(async (trx) => {
@@ -614,7 +621,8 @@ router.delete("/:id", requirePermission("jobs.delete"), async (req, res) => {
       });
       await trx("inventory_items").where({ id: i.inventory_item_id, tenant_id: tenantId }).increment("quantity", i.quantity);
     }
-    await trx("job_cards").where({ id: req.params.id }).delete();
+    // Soft delete: the card (with its paper and ink lines) stays visible in "Deleted Job Cards"
+    await trx("job_cards").where({ id: req.params.id }).update({ deleted_at: new Date(), deleted_by: req.user.id, updated_at: new Date() });
   });
   await writeAuditLog(req, "job.deleted", "job_card", req.params.id, existing, null);
   res.status(204).send();
@@ -629,6 +637,7 @@ router.patch("/:id/operator-update", async (req, res) => {
 
   const job = await db("job_cards")
     .where({ id: req.params.id, tenant_id: tenantId })
+    .whereNull("deleted_at")
     .where((qb) => {
       qb.where("print_operator_id", userId)
         .orWhere("binding_operator_id", userId)
