@@ -592,7 +592,30 @@ router.delete("/:id", requirePermission("jobs.delete"), async (req, res) => {
   const tenantId = req.user.tenantId!;
   const existing = await db("job_cards").where({ id: req.params.id, tenant_id: tenantId }).first();
   if (!existing) { res.status(404).json({ error: "Job not found" }); return; }
-  await db("job_cards").where({ id: req.params.id }).delete();
+  // Put the paper and ink this job consumed back into inventory, then delete the card
+  await db.transaction(async (trx) => {
+    const papers = await trx("job_papers").where({ job_id: req.params.id });
+    for (const p of papers) {
+      await trx("inventory_transactions").insert({
+        tenant_id: tenantId, paper_stock_id: p.paper_stock_id,
+        job_id: req.params.id, performed_by: req.user.id,
+        type: "in", quantity: p.sheet_count,
+        notes: `Returned: Job #${existing.job_number} deleted`,
+      });
+      await trx("paper_stock").where({ id: p.paper_stock_id, tenant_id: tenantId }).increment("quantity", p.sheet_count);
+    }
+    const inks = await trx("job_inks").where({ job_id: req.params.id });
+    for (const i of inks) {
+      await trx("inventory_transactions").insert({
+        tenant_id: tenantId, inventory_item_id: i.inventory_item_id,
+        job_id: req.params.id, performed_by: req.user.id,
+        type: "in", quantity: i.quantity,
+        notes: `Returned: Job #${existing.job_number} deleted`,
+      });
+      await trx("inventory_items").where({ id: i.inventory_item_id, tenant_id: tenantId }).increment("quantity", i.quantity);
+    }
+    await trx("job_cards").where({ id: req.params.id }).delete();
+  });
   await writeAuditLog(req, "job.deleted", "job_card", req.params.id, existing, null);
   res.status(204).send();
 });
