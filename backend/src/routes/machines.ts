@@ -23,7 +23,8 @@ const MachineSchema = z.object({
 
 // GET /machines?page&limit&search&sortBy&sortDir&status&type
 router.get("/", requirePermission("settings.view"), async (req, res) => {
-  const params = parseListParams(req, { sortBy: "name" });
+  // Newest first, so a machine you just added is at the top of the list
+  const params = parseListParams(req, { sortBy: "created_at", sortDir: "desc" });
   const tenantId = req.user.tenantId!;
   const { status, type } = req.query as Record<string, string>;
 
