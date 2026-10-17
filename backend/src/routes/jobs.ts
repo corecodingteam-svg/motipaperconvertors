@@ -26,6 +26,37 @@ router.use(requireTenant);
 
 const JOB_SORT_COLS = ["job_number", "title", "status", "due_date", "created_at", "quoted_price", "invoice_date", "deleted_at"];
 
+// Compares what a job used before and after an edit, and adjusts stock only by the difference.
+// One transaction is logged per item that really changed; unchanged items log nothing.
+async function applyStockDelta(trx: Knex.Transaction, o: {
+  tenantId: string; userId: string; jobId: string; jobNumber: number; jobTitle: string;
+  stockTable: "paper_stock" | "inventory_items"; txnColumn: "paper_stock_id" | "inventory_item_id";
+  oldLines: { id: string; qty: number }[]; newLines: { id: string; qty: number }[];
+}) {
+  const total = (lines: { id: string; qty: number }[]) => {
+    const m = new Map<string, number>();
+    for (const l of lines) m.set(l.id, (m.get(l.id) ?? 0) + l.qty);
+    return m;
+  };
+  const before = total(o.oldLines);
+  const after = total(o.newLines);
+  for (const id of new Set([...before.keys(), ...after.keys()])) {
+    const delta = (after.get(id) ?? 0) - (before.get(id) ?? 0);
+    if (delta === 0) continue;
+    const used = delta > 0; // more used than before → stock goes out; less → part is returned
+    await trx("inventory_transactions").insert({
+      tenant_id: o.tenantId, [o.txnColumn]: id,
+      job_id: o.jobId, performed_by: o.userId,
+      type: used ? "out" : "in", quantity: Math.abs(delta),
+      notes: used
+        ? `Job #${o.jobNumber} edited: ${Math.abs(delta)} more used (${o.jobTitle})`
+        : `Job #${o.jobNumber} edited: ${Math.abs(delta)} returned (${o.jobTitle})`,
+    });
+    const q = trx(o.stockTable).where({ id, tenant_id: o.tenantId });
+    await (used ? q.decrement("quantity", Math.abs(delta)) : q.increment("quantity", Math.abs(delta)));
+  }
+}
+
 // ── GET /jobs ─────────────────────────────────────────────
 // Query params: page, limit, search, sortBy, sortDir, status, clientId, machineId, dueDateFrom, dueDateTo
 router.get("/", requirePermission("jobs.view"), async (req, res) => {
@@ -442,7 +473,7 @@ router.patch("/:id", requirePermission("jobs.edit"), async (req, res) => {
   const existing = await db("job_cards").where({ id: req.params.id, tenant_id: tenantId }).whereNull("deleted_at").first();
   if (!existing) { res.status(404).json({ error: "Job not found" }); return; }
 
-  const allowed = ["title", "description", "quantity", "size", "colors_front", "colors_back",
+  const allowed = ["title", "job_type", "description", "quantity", "size", "colors_front", "colors_back",
     "paper_type", "finishing", "due_date", "machine_id", "assigned_operator_id",
     "quoted_price", "estimated_cost", "actual_cost",
     // Extended fields
@@ -475,71 +506,43 @@ router.patch("/:id", requirePermission("jobs.edit"), async (req, res) => {
   const [updated] = await db.transaction(async (trx) => {
     const [upd] = await trx("job_cards").where({ id: req.params.id }).update(updates).returning("*");
 
-    // If papers array provided, replace all job_papers and re-sync inventory
+    // Papers: rewrite the job's lines, but only touch inventory (and log transactions) for what actually changed
     if (req.body.papers !== undefined) {
       const newPapers: { paperStockId: string; sheetCount: number; paperCost?: number }[] = (req.body.papers ?? []).filter((p: { paperStockId: string; sheetCount: number }) => p.paperStockId && p.sheetCount > 0);
-
-      // Reverse all old deductions
       const oldPapers = await trx("job_papers").where({ job_id: req.params.id });
-      for (const op of oldPapers) {
-        await trx("inventory_transactions").insert({
-          tenant_id: tenantId, paper_stock_id: op.paper_stock_id,
-          job_id: req.params.id, performed_by: req.user.id,
-          type: "in", quantity: op.sheet_count,
-          notes: `Reversal for Job #${existing.job_number} edit`,
-        });
-        await trx("paper_stock").where({ id: op.paper_stock_id, tenant_id: tenantId }).increment("quantity", op.sheet_count);
-      }
 
-      // Delete old job_papers
+      await applyStockDelta(trx, {
+        tenantId, userId: req.user.id, jobId: req.params.id, jobNumber: existing.job_number, jobTitle: existing.title,
+        stockTable: "paper_stock", txnColumn: "paper_stock_id",
+        oldLines: oldPapers.map((o: { paper_stock_id: string; sheet_count: number }) => ({ id: o.paper_stock_id, qty: Number(o.sheet_count) })),
+        newLines: newPapers.map(n => ({ id: n.paperStockId, qty: Number(n.sheetCount) })),
+      });
+
       await trx("job_papers").where({ job_id: req.params.id }).delete();
-
-      // Insert new job_papers and deduct
       if (newPapers.length > 0) {
         await trx("job_papers").insert(
           newPapers.map(p => ({ job_id: req.params.id, paper_stock_id: p.paperStockId, sheet_count: p.sheetCount, paper_cost: p.paperCost ?? null }))
         );
-        for (const p of newPapers) {
-          await trx("inventory_transactions").insert({
-            tenant_id: tenantId, paper_stock_id: p.paperStockId,
-            job_id: req.params.id, performed_by: req.user.id,
-            type: "out", quantity: p.sheetCount,
-            notes: `Auto-deducted for Job #${existing.job_number}: ${existing.title} (updated)`,
-          });
-          await trx("paper_stock").where({ id: p.paperStockId, tenant_id: tenantId }).decrement("quantity", p.sheetCount);
-        }
       }
     }
 
-    // If inks array provided, replace all job_inks and re-sync inventory (same approach as papers)
+    // Inks: same approach as papers
     if (req.body.inks !== undefined) {
       const newInks: { inventoryItemId: string; quantity: number }[] = (req.body.inks ?? []).filter((i: { inventoryItemId: string; quantity: number }) => i.inventoryItemId && Number(i.quantity) > 0);
-
       const oldInks = await trx("job_inks").where({ job_id: req.params.id });
-      for (const oi of oldInks) {
-        await trx("inventory_transactions").insert({
-          tenant_id: tenantId, inventory_item_id: oi.inventory_item_id,
-          job_id: req.params.id, performed_by: req.user.id,
-          type: "in", quantity: oi.quantity,
-          notes: `Reversal for Job #${existing.job_number} edit`,
-        });
-        await trx("inventory_items").where({ id: oi.inventory_item_id, tenant_id: tenantId }).increment("quantity", oi.quantity);
-      }
-      await trx("job_inks").where({ job_id: req.params.id }).delete();
 
+      await applyStockDelta(trx, {
+        tenantId, userId: req.user.id, jobId: req.params.id, jobNumber: existing.job_number, jobTitle: existing.title,
+        stockTable: "inventory_items", txnColumn: "inventory_item_id",
+        oldLines: oldInks.map((o: { inventory_item_id: string; quantity: number | string }) => ({ id: o.inventory_item_id, qty: Number(o.quantity) })),
+        newLines: newInks.map(n => ({ id: n.inventoryItemId, qty: Number(n.quantity) })),
+      });
+
+      await trx("job_inks").where({ job_id: req.params.id }).delete();
       if (newInks.length > 0) {
         await trx("job_inks").insert(
           newInks.map(i => ({ job_id: req.params.id, inventory_item_id: i.inventoryItemId, quantity: Number(i.quantity) }))
         );
-        for (const i of newInks) {
-          await trx("inventory_transactions").insert({
-            tenant_id: tenantId, inventory_item_id: i.inventoryItemId,
-            job_id: req.params.id, performed_by: req.user.id,
-            type: "out", quantity: Number(i.quantity),
-            notes: `Auto-deducted for Job #${existing.job_number}: ${existing.title} (updated)`,
-          });
-          await trx("inventory_items").where({ id: i.inventoryItemId, tenant_id: tenantId }).decrement("quantity", Number(i.quantity));
-        }
       }
     }
 
